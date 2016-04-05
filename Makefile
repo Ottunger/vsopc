@@ -9,9 +9,8 @@ install-tools:
 	sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886
 	sudo apt-get update
 	sudo apt-get install -y oracle-java8-installer
-	wget http://llvm.org/releases/3.2/llvm-3.2.src.tar.gz
 	tar -xf llvm-3.2.src.tar.gz
-	cd llvm-3.2.src; ./configure --enable-shared; sudo make CXXFLAGS='-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS' CFLAGS='-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS'; sudo make install
+	cd llvm-3.2.src; sudo make install
 	
 vsopc:
 	find -name "*.java" > sources

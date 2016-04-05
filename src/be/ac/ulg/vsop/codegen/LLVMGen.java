@@ -34,9 +34,9 @@ public class LLVMGen {
       this.ext = ext;
       rscope = root.scope;
       cstrs = new HashMap<String, LLVMTypeRef>();
-      Pointer<Byte> mname = Pointer.allocateArray(Byte.class, 8);
+      Pointer<Character> mname = Pointer.allocateArray(Character.class, 4);
       mname.setChars("vsop".toCharArray());
-      m = LLVMLibrary.LLVMModuleCreateWithName(mname);
+      m = LLVMLibrary.LLVMModuleCreateWithName(mname.as(Byte.class));
    }
    
    /**
@@ -95,9 +95,9 @@ public class LLVMGen {
                   types.set(i, tps.get(i));
                st = LLVMLibrary.LLVMStructType(types, tps.size(), 1);
                //Add in LLVM IR code this structure type as a global
-               Pointer<Byte> gname = Pointer.allocateArray(Byte.class, 2*root.getValue().toString().length());
+               Pointer<Character> gname = Pointer.allocateArray(Character.class, root.getValue().toString().length());
                gname.setChars(root.getValue().toString().toCharArray());
-               LLVMLibrary.LLVMAddGlobal(m, st, gname);
+               LLVMLibrary.LLVMAddGlobal(m, st, gname.as(Byte.class));
                cstrs.put(root.getValue().toString(), st);
                break;
             default:
@@ -170,7 +170,7 @@ public class LLVMGen {
     */
    private void genFunctions(String cname, ASTNode root) {
       boolean has;
-      Pointer<Byte> gname;
+      Pointer<Character> gname;
       Pointer<LLVMTypeRef> types;
       LLVMLibrary.LLVMTypeRef fsig;
       LLVMLibrary.LLVMValueRef fbody;
@@ -198,9 +198,9 @@ public class LLVMGen {
                fsig = LLVMLibrary.LLVMFunctionType(LLVMGen.LLVMType(root.getProp("type").toString()), types,
                        has? 1 + root.getChildren().get(1).getChildren().size() : 1, 0);
                //Name the methos as global function and register it
-               gname = Pointer.allocateArray(Byte.class, 2*(cname.length() + root.getChildren().get(0).getValue().toString().length()));
+               gname = Pointer.allocateArray(Character.class, cname.length() + root.getChildren().get(0).getValue().toString().length());
                gname.setChars(LLVMGen.catChars(cname.toCharArray(), root.getChildren().get(0).getValue().toString().toCharArray()));
-               fbody = LLVMLibrary.LLVMAddFunction(m, gname, fsig);
+               fbody = LLVMLibrary.LLVMAddFunction(m, gname.as(Byte.class), fsig);
                //Add method body
                LLVMLibrary.LLVMBasicBlockRef bb = LLVMLibrary.LLVMAppendBasicBlock(fbody, Pointer.allocateArray(Byte.class, 0));
                LLVMLibrary.LLVMBuilderRef builder = LLVMLibrary.LLVMCreateBuilder();
@@ -263,6 +263,8 @@ public class LLVMGen {
                return null;
          }
       } else {
+         return null;
+         /*
          switch(root.stype) {
             case "call":
                type = getNodeType(root, 0);
@@ -383,6 +385,7 @@ public class LLVMGen {
             default:
                break;
          }
+         */
       }
    }
 
