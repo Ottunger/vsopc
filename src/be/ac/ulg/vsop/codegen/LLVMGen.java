@@ -1,6 +1,5 @@
 package be.ac.ulg.vsop.codegen;
 
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -194,7 +193,6 @@ public class LLVMGen {
       Pointer<LLVMTypeRef> types;
       LLVMTypeRef fsig;
       LLVMValueRef fbody, asgn;
-      HashMap<String, Integer> argPos;
 
       if(root.ending == false) {
          switch(root.stype) {
@@ -243,14 +241,12 @@ public class LLVMGen {
             case "field":
                if(root.getChildren().size() > 3) {
                   //Initialized
-                  fbody = LLVMLibrary.LLVMBuildLoad(initb, buildBody(cname, root.getChildren().get(0), initb), Pointer.allocateArray(Byte.class, 6));
                   asgn = buildBody(cname, root.getChildren().get(2), initb);
                } else {
                   //Default initialized
-                  fbody = LLVMLibrary.LLVMBuildLoad(initb, buildBody(cname, root.getChildren().get(0), initb), Pointer.allocateArray(Byte.class, 6));
-                  asgn = getDefaultForType(root.getChildren().get(1).getValue().toString());
+                  asgn = getDefaultForType(root.getChildren().get(1).getProp("type").toString());
                }
-               LLVMLibrary.LLVMBuildStore(initb, asgn, fbody);
+               LLVMLibrary.LLVMBuildStore(initb, buildBody(cname, root.getChildren().get(0), initb), asgn);
                cscope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), asgn);
                break;
             default:
@@ -369,8 +365,7 @@ public class LLVMGen {
             case "formal":
                return buildBody(cname, root.getChildren().get(0), b);
             case "assign":
-               tmp = LLVMLibrary.LLVMBuildLoad(b, buildBody(cname, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
-               return LLVMLibrary.LLVMBuildStore(b, buildBody(cname, root.getChildren().get(1), b), tmp);
+               return LLVMLibrary.LLVMBuildStore(b, buildBody(cname, root.getChildren().get(1), b), buildBody(cname, root.getChildren().get(0), b));
             case "block":
                for(int i = 0; i < root.getChildren().size() - 1; i++)
                   buildBody(cname, root.getChildren().get(i), b);
