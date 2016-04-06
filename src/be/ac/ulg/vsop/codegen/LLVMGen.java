@@ -71,8 +71,11 @@ public class LLVMGen {
    private void genStructures(ASTNode root, boolean pass, boolean second) {
       String type = "";
       ASTNode vclass;
-      LLVMTypeRef t, st;
+      LLVMTypeRef t, st, fsig;
+      LLVMValueRef fbody;
+      LLVMLibrary.LLVMBuilderRef builder = null;
       ArrayList<LLVMTypeRef> tps;
+      Pointer<LLVMTypeRef> ptr;
       HashSet<String> fields;
       
       if(!second && root.ending) {
@@ -104,6 +107,16 @@ public class LLVMGen {
                gname.setChars(type.toCharArray());
                LLVMLibrary.LLVMAddGlobal(m, st, gname.as(Byte.class));
                cstrs.put(type, st);
+               //Add init method for this class
+               ptr = Pointer.allocateArray(LLVMTypeRef.class, 1);
+               ptr.set(0, LLVMGen.LLVMType(root.getChildren().get(0).getValue().toString()));
+               fsig = LLVMLibrary.LLVMFunctionType(LLVMLibrary.LLVMVoidType(), ptr, 1, 0);
+               fbody = LLVMLibrary.LLVMAddFunction(m, Pointer.allocateArray(Byte.class, 6), fsig);
+               cscope.put(ScopeItem.METHOD + type + "<init>", fbody);
+               //Prepare builder so that to send it to pass
+               LLVMLibrary.LLVMBasicBlockRef bb = LLVMLibrary.LLVMAppendBasicBlock(fbody, Pointer.allocateArray(Byte.class, 6));
+               builder = LLVMLibrary.LLVMCreateBuilder();
+               LLVMLibrary.LLVMPositionBuilderAtEnd(builder, bb);
                break;
             default:
                break;
@@ -116,7 +129,7 @@ public class LLVMGen {
          }
       } else if(second){
          for(ASTNode r : root.getChildren()) {
-            genFunctions(type, r);
+            genFunctions(type, r, builder);
          }
       }
    }
@@ -139,7 +152,7 @@ public class LLVMGen {
             //Pointer to well known String class instance
             return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
          case SymbolValue.UNIT:
-            return LLVMLibrary.LLVMVoidType();
+            return LLVMLibrary.LLVMInt8Type();
          default:
             //Is a pointer, assume we are 32-bit arch
             return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
@@ -161,7 +174,7 @@ public class LLVMGen {
             //Pointer to well known String class instance
             return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
          case "unit":
-            return LLVMLibrary.LLVMVoidType();
+            return LLVMLibrary.LLVMInt8Type();
          default:
             //Is a pointer, assume we are 32-bit arch
             return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
@@ -172,28 +185,34 @@ public class LLVMGen {
     * Generate functions into builder.
     * @param cname Class name for the following methods.
     * @param root Where we are.
+    * @param initb Builder for init function.
     */
-   private void genFunctions(String cname, ASTNode root) {
+   private void genFunctions(String cname, ASTNode root, LLVMLibrary.LLVMBuilderRef initb) {
       boolean has;
       ASTNode fn;
       Pointer<Character> gname;
       Pointer<LLVMTypeRef> types;
       LLVMTypeRef fsig;
-      LLVMValueRef fbody;
+      LLVMValueRef fbody, asgn;
       HashMap<String, Integer> argPos;
 
       if(root.ending == false) {
          switch(root.stype) {
             case "method":
+               //As method are ALWAYS after fields, buidl the end of <init> at first method
+               if(initb != null) {
+                  LLVMLibrary.LLVMBuildRetVoid(initb);
+                  //This creates several returns at end of function, but, who cares?
+               }
+
+               //Start building method
                has = root.getChildren().get(1).stype.equals("formals");
-               argPos = new HashMap<String, Integer>();
                if(has) {
                   ASTNode fms = root.getChildren().get(1);
                   types = Pointer.allocateArray(LLVMTypeRef.class, fms.getChildren().size() + 1);
                   for(int i = 1; i < fms.getChildren().size() + 1; i++) {
                      fn = fms.getChildren().get(i - 1).getChildren().get(0);
                      types.set(i, LLVMGen.LLVMType(fn.getProp("type").toString()));
-                     argPos.put(fn.getValue().toString(), i);
                   }
                } else {
                   types = Pointer.allocateArray(LLVMTypeRef.class, 1);
@@ -203,25 +222,36 @@ public class LLVMGen {
                //Create method declaration
                fsig = LLVMLibrary.LLVMFunctionType(LLVMGen.LLVMType(root.getProp("type").toString()), types,
                        has? 1 + root.getChildren().get(1).getChildren().size() : 1, 0);
-               //Name the methos as global function and register it
+               //Name the method as global function and register it
                gname = Pointer.allocateArray(Character.class, cname.length() + root.getChildren().get(0).getValue().toString().length());
                gname.setChars(LLVMGen.catChars(cname.toCharArray(), root.getChildren().get(0).getValue().toString().toCharArray()));
                fbody = LLVMLibrary.LLVMAddFunction(m, gname.as(Byte.class), fsig);
+               cscope.put(ScopeItem.METHOD + root.getChildren().get(0).getValue().toString(), fbody);
                //Register params for the build of body
-               cscope.put("self", LLVMLibrary.LLVMGetParam(fbody, 0));
+               cscope.put(ScopeItem.FIELD + "self", LLVMLibrary.LLVMGetParam(fbody, 0));
                if(has) {
                   ASTNode fms = root.getChildren().get(1);
                   for(int i = 0; i < fms.getChildren().size(); i++)
-                     cscope.put(fms.getChildren().get(i).getChildren().get(0).getValue().toString(), LLVMLibrary.LLVMGetParam(fbody, i + 1));
+                     cscope.put(ScopeItem.FIELD + fms.getChildren().get(i).getChildren().get(0).getValue().toString(), LLVMLibrary.LLVMGetParam(fbody, i + 1));
                }
                //Add method body
                LLVMLibrary.LLVMBasicBlockRef bb = LLVMLibrary.LLVMAppendBasicBlock(fbody, Pointer.allocateArray(Byte.class, 6));
                LLVMLibrary.LLVMBuilderRef builder = LLVMLibrary.LLVMCreateBuilder();
                LLVMLibrary.LLVMPositionBuilderAtEnd(builder, bb);
-               LLVMLibrary.LLVMBuildRet(builder, buildBody(argPos, has? root.getChildren().get(2) : root.getChildren().get(1), builder));
+               LLVMLibrary.LLVMBuildRet(builder, buildBody(cname, has? root.getChildren().get(2) : root.getChildren().get(1), builder));
                break;
             case "field":
-               //TODO: Add field name to current scope $cscope and build assign of initial value
+               if(root.getChildren().size() > 3) {
+                  //Initialized
+                  fbody = LLVMLibrary.LLVMBuildLoad(initb, buildBody(cname, root.getChildren().get(0), initb), Pointer.allocateArray(Byte.class, 6));
+                  asgn = buildBody(cname, root.getChildren().get(2), initb);
+               } else {
+                  //Default initialized
+                  fbody = LLVMLibrary.LLVMBuildLoad(initb, buildBody(cname, root.getChildren().get(0), initb), Pointer.allocateArray(Byte.class, 6));
+                  asgn = getDefaultForType(root.getChildren().get(1).getValue().toString());
+               }
+               LLVMLibrary.LLVMBuildStore(initb, asgn, fbody);
+               cscope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), asgn);
                break;
             default:
                break;
@@ -229,195 +259,158 @@ public class LLVMGen {
       }
    }
 
+   /**
+    * Returns the default value for a type.
+    * @param type The type.
+    */
+   private LLVMValueRef getDefaultForType(String type) {
+      switch (type) {
+         case "int32":
+            return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), 0, 1);
+         case "bool":
+            return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
+         case "string":
+            //Pointer to well known String class instance
+            return LLVMLibrary.LLVMConstPointerNull(cstrs.get("string"));
+         case "unit":
+            return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
+         default:
+            //Is a pointer, assume we are 32-bit arch
+            return LLVMLibrary.LLVMConstPointerNull(cstrs.get(type));
+      }
+   }
+
   /**
    * Add function body.
-   * @param ap Position of arguments in list.
+   * @param cname Class name.
    * @param root Current node.
    * @param b Builder.
    */
-   private LLVMLibrary.LLVMValueRef buildBody(HashMap<String, Integer> ap, ASTNode root, LLVMLibrary.LLVMBuilderRef b) {
-      LLVMLibrary.LLVMValueRef tmp;
+   private LLVMLibrary.LLVMValueRef buildBody(String cname, ASTNode root, LLVMLibrary.LLVMBuilderRef b) {
+      boolean has;
+      LLVMValueRef tmp;
+      LLVMLibrary.LLVMBasicBlockRef b1, b2;
+      LLVMLibrary.LLVMBuilderRef bd1, bd2;
+      Pointer<Character> str;
+      Pointer<LLVMValueRef> ptr;
       
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.NOT:
-               return LLVMLibrary.LLVMBuildNot(b, buildBody(ap, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildNot(b, buildBody(cname, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.EQUAL:
                return LLVMLibrary.LLVMBuildICmp(b, LLVMLibrary.LLVMIntPredicate.LLVMIntEQ,
-                       buildBody(ap, root.getChildren().get(0), b), buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+                       buildBody(cname, root.getChildren().get(0), b), buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.AND:
-               return LLVMLibrary.LLVMBuildAnd(b, buildBody(ap, root.getChildren().get(0), b),
-                       buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildAnd(b, buildBody(cname, root.getChildren().get(0), b),
+                       buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.LOWER_EQUAL:
                return LLVMLibrary.LLVMBuildICmp(b, LLVMLibrary.LLVMIntPredicate.LLVMIntSLE,
-                       buildBody(ap, root.getChildren().get(0), b), buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+                       buildBody(cname, root.getChildren().get(0), b), buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.LOWER:
                return LLVMLibrary.LLVMBuildICmp(b, LLVMLibrary.LLVMIntPredicate.LLVMIntSLT,
-                       buildBody(ap, root.getChildren().get(0), b), buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+                       buildBody(cname, root.getChildren().get(0), b), buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.PLUS:
-               return LLVMLibrary.LLVMBuildAdd(b, buildBody(ap, root.getChildren().get(0), b),
-                       buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildAdd(b, buildBody(cname, root.getChildren().get(0), b),
+                       buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.MINUS:
-               return LLVMLibrary.LLVMBuildSub(b, buildBody(ap, root.getChildren().get(0), b),
-                       buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildSub(b, buildBody(cname, root.getChildren().get(0), b),
+                       buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.TIMES:
-               return LLVMLibrary.LLVMBuildMul(b, buildBody(ap, root.getChildren().get(0), b),
-                       buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildMul(b, buildBody(cname, root.getChildren().get(0), b),
+                       buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.DIV:
-               return LLVMLibrary.LLVMBuildSDiv(b, buildBody(ap, root.getChildren().get(0), b),
-                       buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildSDiv(b, buildBody(cname, root.getChildren().get(0), b),
+                       buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.POW:
                //TODO: Find POW instruction
-               return LLVMLibrary.LLVMBuildMul(b, buildBody(ap, root.getChildren().get(0), b),
-                       buildBody(ap, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildMul(b, buildBody(cname, root.getChildren().get(0), b),
+                       buildBody(cname, root.getChildren().get(1), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.ISNULL:
-               return LLVMLibrary.LLVMBuildIsNull(b, buildBody(ap, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildIsNull(b, buildBody(cname, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.ASSIGN:
-               tmp = LLVMLibrary.LLVMBuildLoad(b, buildBody(ap, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
-               return LLVMLibrary.LLVMBuildStore(b, buildBody(ap, root.getChildren().get(1), b), tmp);
+               return buildBody(cname, root.getChildren().get(0), b);
             case SymbolValue.NEW:
-               return LLVMLibrary.LLVMBuildAlloca(b, cstrs.get(root.getProp("type")), Pointer.allocateArray(Byte.class, 6));
+               tmp = LLVMLibrary.LLVMBuildAlloca(b, cstrs.get(root.getProp("type")), Pointer.allocateArray(Byte.class, 6));
+               ptr = Pointer.allocate(LLVMValueRef.class);
+               ptr.set(0, tmp);
+               return LLVMLibrary.LLVMBuildCall(b, cscope.get(ScopeItem.METHOD + cname + "<init>"), ptr, 1, Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.INTEGER_LITERAL:
-               
+               return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), (int)root.getValue(), 1);
             case SymbolValue.STRING_LITERAL:
-               
+               str = Pointer.allocateArray(Character.class, root.getValue().toString().length());
+               str.setChars(root.getValue().toString().toCharArray());
+               return LLVMLibrary.LLVMConstString(str.as(Byte.class), root.getValue().toString().length(), 1);
             case SymbolValue.OBJECT_IDENTIFIER:
                //Find in cscope the return. We know the scope is OK, right?
-               return cscope.get(root.getValue().toString());
+               return cscope.get(ScopeItem.FIELD + root.getValue().toString());
             case SymbolValue.FALSE:
-               
+               return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
             case SymbolValue.TRUE:
-               
+               return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 1, 1);
             case SymbolValue.UNIT_VALUE:
-               
+               return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
             default:
                System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
                return null;
          }
       } else {
-         return null;
-         /*
          switch(root.stype) {
             case "call":
-               type = getNodeType(root, 0);
-               do {
-                  //Get scope of callee
-                  s = scope.get(ScopeItem.CLASS + type);
-                  //Check that object type has methods
-                  if(s == null || s.type != ScopeItem.CLASS)
-                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call a method on type " + getNodeType(root, 0));
-                  //Check that this method is registered
-                  if((t = s.userType.scope.get(ScopeItem.METHOD + root.getChildren().get(1).getValue().toString())) != null)
-                     break;
-               } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
-               //Check that this method is registered
-               if((t = s.userType.scope.get(ScopeItem.METHOD + root.getChildren().get(1).getValue().toString())) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call method " +
-                          root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, 0));
-               //Then our type is the one of the method
-               root.addProp("type", getNodeType(t.userType, -1));
-               //Check ok arguments
-               if(((root.getChildren().size() == 2) != (t.formals == null)) || (root.getChildren().size() > 2 && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error wrong number of arguments to method " + root.getChildren().get(1).getValue());
-               } else if(root.getChildren().size() > 2) {
-                  for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
-                     String arg = getNodeType(root.getChildren().get(2), i);
-                     String formal = getNodeType(t.formals, i);
-                     if(!isSameOrChild(arg, formal))
-                        throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
-                                ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
-                  }
+               has = root.getChildren().size() > 2;
+               ptr = Pointer.allocateArray(LLVMValueRef.class, has? 1 + root.getChildren().size() : 1);
+               ptr.set(0, buildBody(cname, root.getChildren().get(0), b));
+               if(has) {
+                  for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++)
+                     ptr.set(i + 1, buildBody(cname, root.getChildren().get(2).getChildren().get(i), b));
                }
-               break;
+               return LLVMLibrary.LLVMBuildCall(b, cscope.get(ScopeItem.METHOD + root.getChildren().get(1).getValue().toString()),
+                       ptr, has? 1 + root.getChildren().size() : 1, Pointer.allocateArray(Byte.class, 6));
             case "formal":
-               root.addProp("type", getNodeType(root, 0));
-               if(ext.get(getNodeType(root, 0)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 0));
-               break;
-            case "field":
-               //Here we can check no override of field
-               type = root.scope.get(ScopeItem.FIELD + "self").userType.getProp("type").toString();
-               while(!(type = ext.get(type)).equals(Analyzer.EMPTY)) {
-                  //If such a field already exists above...
-                  if(scope.get(ScopeItem.CLASS + type).userType.scope.get(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString()) != null)
-                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine symbol '" + root.getChildren().get(0).getValue().toString() + "'here");
-               }
-               root.addProp("type", getNodeType(root, 0));
-               if(ext.get(getNodeType(root, 0)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 0));
-               if(root.getChildren().size() > 2 && !getNodeType(root, 0).equals(getNodeType(root, 2)))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " +
-                          getNodeType(root, 2) + " to " + getNodeType(root, 0));
-               break;
+               return buildBody(cname, root.getChildren().get(0), b);
             case "assign":
-               type = getNodeType(root, 1);
-               root.addProp("type", type);
-               //Check that no assign to self
-               if(root.getChildren().get(0).getValue().toString().equals("self"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
-               do {
-                  //Get scope of candidate
-                  s = scope.get(ScopeItem.CLASS + type);
-                  //Check that candidate and assigned are the same
-                  if(getNodeType(s.userType, -1).equals(getNodeType(root, 0)))
-                     break;
-               } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
-               if(type.equals(Analyzer.EMPTY))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " +
-                          getNodeType(root, 1) + " to " + getNodeType(root, 0));
-               break;
-            case "method":
-               if(ext.get(getNodeType(root, -1)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, -1));
-               if(!getNodeType(root, -1).equals(getNodeType(root, root.getChildren().size() - 1)))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method type is " +
-                          getNodeType(root, -1) + " but got " + getNodeType(root, root.getChildren().size() - 1));
+               tmp = LLVMLibrary.LLVMBuildLoad(b, buildBody(cname, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildStore(b, buildBody(cname, root.getChildren().get(1), b), tmp);
             case "block":
-               root.addProp("type", getNodeType(root, root.getChildren().size() - 1));
-               break;
+               for(int i = 0; i < root.getChildren().size() - 1; i++)
+                  buildBody(cname, root.getChildren().get(i), b);
+               return buildBody(cname, root.getChildren().get(root.getChildren().size() - 1), b);
             case "if":
-               if(!getNodeType(root, 0).equals("bool"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error if condition must be bool");
-               root.addProp("type", getNodeType(root, 1));
-               if(root.getChildren().size() > 2) {
-                  if(getNodeType(root, 1).equals("unit") || getNodeType(root, 2).equals("unit"))
-                     root.addProp("type", "unit");
-                  else {
-                     if(isSameOrChild(getNodeType(root, 1), getNodeType(root, 2)))
-                        root.addProp("type", getNodeType(root, 2));
-                     else if(isSameOrChild(getNodeType(root, 2), getNodeType(root, 1)))
-                        root.addProp("type", getNodeType(root, 1));
-                     else
-                        throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error if branches are typed as " +
-                                getNodeType(root, 1) + " and " + getNodeType(root, 2));
-                  }
-               }
-               break;
+               b1 = LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6));
+               b2 = LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6));
+               bd1 = LLVMLibrary.LLVMCreateBuilder();
+               bd2 = LLVMLibrary.LLVMCreateBuilder();
+               LLVMLibrary.LLVMPositionBuilderAtEnd(bd1, b1);
+               LLVMLibrary.LLVMPositionBuilderAtEnd(bd2, b2);
+               LLVMLibrary.LLVMBuildRet(bd1, buildBody(cname, root.getChildren().get(1), bd1));
+               if(root.getChildren().size() > 2)
+                  LLVMLibrary.LLVMBuildRet(bd2, buildBody(cname, root.getChildren().get(2), bd2));
+               else
+                  LLVMLibrary.LLVMBuildRet(bd2, LLVMLibrary.LLVMBuildUnreachable(bd2));
+               return LLVMLibrary.LLVMBuildCondBr(b, buildBody(cname, root.getChildren().get(0), b), b1, b2);
             case "while":
-               if(!getNodeType(root, 0).equals("bool"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error while condition must be bool");
-               break;
+               b1 = LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6));
+               bd1 = LLVMLibrary.LLVMCreateBuilder();
+               LLVMLibrary.LLVMPositionBuilderAtEnd(bd1, b1);
+               buildBody(cname, root.getChildren().get(1), bd1);
+               LLVMLibrary.LLVMBuildBr(bd1, b1);
+               return LLVMLibrary.LLVMBuildCondBr(b, buildBody(cname, root.getChildren().get(0), b), b1, LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6)));
             case "let":
-               type = getNodeType(root, 2);
-               if(ext.get(getNodeType(root, 1)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 1));
-               do {
-                  //Get scope of candidate
-                  s = scope.get(ScopeItem.CLASS + type);
-                  //Check that candidate and assigned are the same
-                  if(getNodeType(s.userType, -1).equals(getNodeType(root, 1)))
-                     break;
-               } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
-               if(root.getChildren().size() > 3 && type.equals(Analyzer.EMPTY))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " +
-                          getNodeType(root, 2) + " to " + getNodeType(root, 1));
-            case "uminus": //Fallthrough
-               root.addProp("type", getNodeType(root, 0));
-               break;
+               if(root.getChildren().size() > 3) {
+                  //Initialized
+                  cscope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), buildBody(cname, root.getChildren().get(2), b));
+                  return buildBody(cname, root.getChildren().get(3), b);
+               } else {
+                  //Unitialized!
+                  cscope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), getDefaultForType(root.getChildren().get(1).getProp("type").toString()));
+                  return buildBody(cname, root.getChildren().get(2), b);
+               }
+            case "uminus":
+               return LLVMLibrary.LLVMBuildNeg(b, buildBody(cname, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
             default:
-               break;
+               System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
+               return null;
          }
-         */
       }
    }
 
