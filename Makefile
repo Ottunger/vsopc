@@ -11,6 +11,7 @@ install-tools:
 	sudo apt-get install -y oracle-java8-installer
 	tar -xf llvm-3.2.src.tar.gz
 	cd llvm-3.2.src; sudo make install
+	sudo ln -s /usr/local/lib/libLLVM-3.2svn.so /usr/local/lib/libLLVM-3.2.so
 	
 vsopc:
 	find -name "*.java" > sources

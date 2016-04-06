@@ -70,7 +70,7 @@ public class Compiler {
       }
       
       LLVMGen gen = new LLVMGen(parser.getRoot(), a.getExt());
-      gen.emit(System.out);
+      gen.emit(-1);
       System.exit(0);
 	}
 
