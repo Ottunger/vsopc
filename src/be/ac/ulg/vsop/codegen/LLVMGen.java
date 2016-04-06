@@ -88,7 +88,7 @@ public class LLVMGen {
                   vclass = rscope.get(ScopeItem.CLASS + type).userType;
                   for(String fname : vclass.scope.keySet()) {
                      if(fname.startsWith(ScopeItem.FIELD + "") && !fields.contains(fname)) {
-                        t = LLVMGen.LLVMType(root.scope.get(fname).type);
+                        t = llvmType(root.scope.get(fname).type);
                         if(t != null) {
                            fields.add(fname);
                            tps.add(t);
@@ -108,7 +108,7 @@ public class LLVMGen {
                cstrs.put(type, st);
                //Add init method for this class
                ptr = Pointer.allocateArray(LLVMTypeRef.class, 1);
-               ptr.set(0, LLVMGen.LLVMType(root.getChildren().get(0).getValue().toString()));
+               ptr.set(0, llvmType(root.getChildren().get(0).getValue().toString()));
                fsig = LLVMLibrary.LLVMFunctionType(LLVMLibrary.LLVMVoidType(), ptr, 1, 0);
                fbody = LLVMLibrary.LLVMAddFunction(m, Pointer.allocateArray(Byte.class, 6), fsig);
                cscope.put(ScopeItem.METHOD + type + "<init>", fbody);
@@ -138,7 +138,7 @@ public class LLVMGen {
     * @param type Our kind of type.
     * @return LLVMTypeRef equivalent.
     */
-   private static LLVMTypeRef LLVMType(int type) {
+   private LLVMTypeRef llvmType(int type) {
       switch(type) {
          case SymbolValue.INT32:
             return LLVMLibrary.LLVMInt32Type();
@@ -146,15 +146,15 @@ public class LLVMGen {
             return LLVMLibrary.LLVMInt8Type();
          case SymbolValue.OBJECT_IDENTIFIER:
             //Is a pointer, assume we are 32-bit arch
-            return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
+            return LLVMLibrary.LLVMPointerType(cstrs.get(type), 1);
          case SymbolValue.STRING:
-            //Pointer to well known String class instance
-            return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
+          //Pointer to well known String class instance
+            return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt8Type(), 1);
          case SymbolValue.UNIT:
             return LLVMLibrary.LLVMInt8Type();
          default:
-            //Is a pointer, assume we are 32-bit arch
-            return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
+          //Is a pointer, assume we are 32-bit arch
+            return LLVMLibrary.LLVMPointerType(cstrs.get(type), 1);
       }
    }
 
@@ -163,7 +163,7 @@ public class LLVMGen {
     * @param type Our kind of type.
     * @return LLVMTypeRef equivalent.
     */
-   private static LLVMTypeRef LLVMType(String type) {
+   private LLVMTypeRef llvmType(String type) {
       switch(type) {
          case "int32":
             return LLVMLibrary.LLVMInt32Type();
@@ -171,12 +171,12 @@ public class LLVMGen {
             return LLVMLibrary.LLVMInt8Type();
          case "string":
             //Pointer to well known String class instance
-            return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
+            return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt8Type(), 1);
          case "unit":
             return LLVMLibrary.LLVMInt8Type();
          default:
             //Is a pointer, assume we are 32-bit arch
-            return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt32Type(), 1);
+            return LLVMLibrary.LLVMPointerType(cstrs.get(type), 1);
       }
    }
 
@@ -199,7 +199,7 @@ public class LLVMGen {
             case "method":
                //As method are ALWAYS after fields, buidl the end of <init> at first method
                if(initb != null) {
-                  LLVMLibrary.LLVMBuildRetVoid(initb);
+                  LLVMLibrary.LLVMBuildRet(initb, cscope.get(ScopeItem.FIELD + "self"));
                   //This creates several returns at end of function, but, who cares?
                }
 
@@ -210,15 +210,15 @@ public class LLVMGen {
                   types = Pointer.allocateArray(LLVMTypeRef.class, fms.getChildren().size() + 1);
                   for(int i = 1; i < fms.getChildren().size() + 1; i++) {
                      fn = fms.getChildren().get(i - 1).getChildren().get(0);
-                     types.set(i, LLVMGen.LLVMType(fn.getProp("type").toString()));
+                     types.set(i, llvmType(fn.getProp("type").toString()));
                   }
                } else {
                   types = Pointer.allocateArray(LLVMTypeRef.class, 1);
                }
                //Add self as parameter to the function
-               types.set(0, LLVMGen.LLVMType(cname));
+               types.set(0, llvmType(cname));
                //Create method declaration
-               fsig = LLVMLibrary.LLVMFunctionType(LLVMGen.LLVMType(root.getProp("type").toString()), types,
+               fsig = LLVMLibrary.LLVMFunctionType(llvmType(root.getProp("type").toString()), types,
                        has? 1 + root.getChildren().get(1).getChildren().size() : 1, 0);
                //Name the method as global function and register it
                gname = Pointer.allocateArray(Character.class, cname.length() + root.getChildren().get(0).getValue().toString().length());
@@ -244,7 +244,7 @@ public class LLVMGen {
                   asgn = buildBody(cname, root.getChildren().get(2), initb);
                } else {
                   //Default initialized
-                  asgn = getDefaultForType(root.getChildren().get(1).getProp("type").toString());
+                  asgn = getDefaultForType(root.getChildren().get(1).getProp("type").toString(), initb);
                }
                LLVMLibrary.LLVMBuildStore(initb, buildBody(cname, root.getChildren().get(0), initb), asgn);
                cscope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), asgn);
@@ -259,7 +259,10 @@ public class LLVMGen {
     * Returns the default value for a type.
     * @param type The type.
     */
-   private LLVMValueRef getDefaultForType(String type) {
+   private LLVMValueRef getDefaultForType(String type, LLVMLibrary.LLVMBuilderRef b) {
+      LLVMValueRef tmp;
+      Pointer<Byte> ptr;
+      
       switch (type) {
          case "int32":
             return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), 0, 1);
@@ -267,7 +270,10 @@ public class LLVMGen {
             return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
          case "string":
             //Pointer to well known String class instance
-            return LLVMLibrary.LLVMConstPointerNull(cstrs.get("string"));
+            tmp = LLVMLibrary.LLVMBuildMalloc(b, llvmType("string"), Pointer.allocateArray(Byte.class, 6));
+            ptr = Pointer.allocateArray(Byte.class, 1);
+            ptr.set(0, (byte) 0);
+            return tmp;
          case "unit":
             return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
          default:
@@ -327,7 +333,7 @@ public class LLVMGen {
             case SymbolValue.ASSIGN:
                return buildBody(cname, root.getChildren().get(0), b);
             case SymbolValue.NEW:
-               tmp = LLVMLibrary.LLVMBuildAlloca(b, cstrs.get(root.getProp("type")), Pointer.allocateArray(Byte.class, 6));
+               tmp = LLVMLibrary.LLVMBuildMalloc(b, cstrs.get(root.getProp("type")), Pointer.allocateArray(Byte.class, 6));
                ptr = Pointer.allocate(LLVMValueRef.class);
                ptr.set(0, tmp);
                return LLVMLibrary.LLVMBuildCall(b, cscope.get(ScopeItem.METHOD + cname + "<init>"), ptr, 1, Pointer.allocateArray(Byte.class, 6));
@@ -397,7 +403,7 @@ public class LLVMGen {
                   return buildBody(cname, root.getChildren().get(3), b);
                } else {
                   //Unitialized!
-                  cscope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), getDefaultForType(root.getChildren().get(1).getProp("type").toString()));
+                  cscope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), getDefaultForType(root.getChildren().get(1).getProp("type").toString(), b));
                   return buildBody(cname, root.getChildren().get(2), b);
                }
             case "uminus":
