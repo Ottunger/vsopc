@@ -340,7 +340,7 @@ public class LLVMGen {
             case SymbolValue.INTEGER_LITERAL:
                return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), (int)root.getValue(), 1);
             case SymbolValue.STRING_LITERAL:
-               str = Pointer.allocateArray(Character.class, root.getValue().toString().length());
+               str = Pointer.allocateArray(Character.class, root.getValue().toString().length() + 1); //Make room for empty char \0
                str.setChars(root.getValue().toString().toCharArray());
                return LLVMLibrary.LLVMConstString(str.as(Byte.class), root.getValue().toString().length(), 1);
             case SymbolValue.OBJECT_IDENTIFIER:
@@ -352,6 +352,14 @@ public class LLVMGen {
                return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 1, 1);
             case SymbolValue.UNIT_VALUE:
                return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
+            case SymbolValue.INT32:
+               return LLVMLibrary.LLVMBuildAlloca(b, LLVMLibrary.LLVMInt32Type(), Pointer.allocateArray(Byte.class, 6));
+            case SymbolValue.BOOL:
+               return LLVMLibrary.LLVMBuildAlloca(b, LLVMLibrary.LLVMInt8Type(), Pointer.allocateArray(Byte.class, 6));
+            case SymbolValue.UNIT:
+               return LLVMLibrary.LLVMBuildAlloca(b, LLVMLibrary.LLVMInt8Type(), Pointer.allocateArray(Byte.class, 6));
+            case SymbolValue.STRING:
+               return LLVMLibrary.LLVMBuildAlloca(b, LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt8Type(), 1), Pointer.allocateArray(Byte.class, 6));
             default:
                System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
                return null;
