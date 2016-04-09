@@ -43,19 +43,19 @@ public class Analyzer {
     */
    public void regScope(ASTNode root) throws Exception {
       ScopeItem si;
-      root.scope.put(ScopeItem.CLASS + "Object", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "Object"), 0));
-      root.scope.put(ScopeItem.CLASS + "String", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "String"), 0));
-      root.scope.put(ScopeItem.CLASS + "int32", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "int32"), 0));
-      root.scope.put(ScopeItem.CLASS + "bool", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "bool"), 0));
-      root.scope.put(ScopeItem.CLASS + "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
+      root.scope.put(ScopeItem.CLASS, "Object", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "Object"), 0));
+      root.scope.put(ScopeItem.CLASS, "String", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "String"), 0));
+      root.scope.put(ScopeItem.CLASS, "int32", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "int32"), 0));
+      root.scope.put(ScopeItem.CLASS, "bool", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "bool"), 0));
+      root.scope.put(ScopeItem.CLASS, "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
       //Register all classes top domain
       regClasses(root, true);
       //Register scopes
-      regScope(root, null, null, 1);
+      regScope(root, null, 1);
       //Check we have a main
-      if((si = root.scope.get(ScopeItem.CLASS + "Main")) == null)
+      if((si = root.scope.get(ScopeItem.CLASS, "Main")) == null)
          throw new Exception("1:1: semantics error no Main class");
-      if((si = si.userType.scope.get(ScopeItem.METHOD + "main")) == null)
+      if((si = si.userType.scope.get(ScopeItem.METHOD, "main")) == null)
          throw new Exception("1:1: semantics error no main method");
       if(si.formals != null || !getNodeType(si.userType, -1).equals("int32"))
          throw new Exception("1:1: semantics error bad main signature");
@@ -73,11 +73,11 @@ public class Analyzer {
       ASTNode node = (index == -1)? root: root.getChildren().get(index);
       ScopeItem ret;
       if(node.itype == SymbolValue.OBJECT_IDENTIFIER) {
-         ret = root.scope.get(ScopeItem.FIELD + node.getValue().toString());
+         ret = root.scope.get(ScopeItem.FIELD, node.getValue().toString());
          if(ret == null)
-            ret = root.scope.get(ScopeItem.METHOD + node.getValue().toString());
+            ret = root.scope.get(ScopeItem.METHOD, node.getValue().toString());
          if(ret == null)
-            ret = root.scope.get(ScopeItem.CLASS + node.getValue().toString());
+            ret = root.scope.get(ScopeItem.CLASS, node.getValue().toString());
          return ASTNode.typeValue(ret.userType);
       } else {
          return node.getProp("type").toString();
@@ -106,7 +106,7 @@ public class Analyzer {
     * @param scope The root scope.
     * @throws Exception
     */
-   private void checkTypes(ASTNode root, HashMap<String, ScopeItem> scope) throws Exception {
+   private void checkTypes(ASTNode root, Scope scope) throws Exception {
       String type;
       ScopeItem s, t;
       HashMap<String, ScopeItem> meths;
@@ -174,16 +174,16 @@ public class Analyzer {
                type = getNodeType(root, 0);
                do {
                   //Get scope of callee
-                  s = scope.get(ScopeItem.CLASS + type);
+                  s = scope.get(ScopeItem.CLASS, type);
                   //Check that object type has methods
                   if(s == null || s.type != ScopeItem.CLASS)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call a method on type " + getNodeType(root, 0));
                   //Check that this method is registered
-                  if((t = s.userType.scope.get(ScopeItem.METHOD + root.getChildren().get(1).getValue().toString())) != null)
+                  if((t = s.userType.scope.get(ScopeItem.METHOD, root.getChildren().get(1).getValue().toString())) != null)
                      break;
                } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
                //Check that this method is registered
-               if((t = s.userType.scope.get(ScopeItem.METHOD + root.getChildren().get(1).getValue().toString())) == null)
+               if((t = s.userType.scope.get(ScopeItem.METHOD, root.getChildren().get(1).getValue().toString())) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call method " +
                            root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, 0));
                //Then our type is the one of the method
@@ -208,10 +208,10 @@ public class Analyzer {
                break;
             case "field":
                //Here we can check no override of field
-               type = root.scope.get(ScopeItem.FIELD + "self").userType.getProp("type").toString();
+               type = root.scope.get(ScopeItem.FIELD, "self").userType.getProp("type").toString();
                while(!(type = ext.get(type)).equals(Analyzer.EMPTY)) {
                   //If such a field already exists above...
-                  if(scope.get(ScopeItem.CLASS + type).userType.scope.get(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString()) != null)
+                  if(scope.get(ScopeItem.CLASS, type).userType.scope.get(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) != null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine symbol '" + root.getChildren().get(0).getValue().toString() + "'here");
                }
                root.addProp("type", getNodeType(root, 0));
@@ -229,7 +229,7 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
                do {
                   //Get scope of candidate
-                  s = scope.get(ScopeItem.CLASS + type);
+                  s = scope.get(ScopeItem.CLASS, type);
                   //Check that candidate and assigned are the same
                   if(getNodeType(s.userType, -1).equals(getNodeType(root, 0)))
                      break;
@@ -275,7 +275,7 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 1));
                do {
                   //Get scope of candidate
-                  s = scope.get(ScopeItem.CLASS + type);
+                  s = scope.get(ScopeItem.CLASS, type);
                   //Check that candidate and assigned are the same
                   if(getNodeType(s.userType, -1).equals(getNodeType(root, 1)))
                      break;
@@ -296,41 +296,40 @@ public class Analyzer {
     * Registers the scope items.
     * @param root The root of the program.
     * @param parent Parent of the current node.
-    * @param gp Greatparent.
     * @param level Level of scope.
     * @throws Exception
     */
-   private void regScope(ASTNode root, ASTNode parent, ASTNode gp, int level) throws Exception {
+   private void regScope(ASTNode root, ASTNode parent, int level) throws Exception {
       ScopeItem si;
-      root.scope = (parent != null)? new HashMap<String, ScopeItem>(parent.scope) : root.scope;
+      if(parent != null)
+         root.scope.setParent(parent.scope);
       
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.CLASS:
                root.addProp("type", root.getChildren().get(0).getValue().toString());
                //Add to own scope and general scope
-               root.scope.put(ScopeItem.CLASS + root.getChildren().get(0).getValue().toString(), new ScopeItem(ScopeItem.CLASS, root, level));
-               parent.scope.put(ScopeItem.CLASS + root.getChildren().get(0).getValue().toString(), new ScopeItem(ScopeItem.CLASS, root, level));
+               root.scope.putAbove(ScopeItem.CLASS, root.getChildren().get(0).getValue().toString(), new ScopeItem(ScopeItem.CLASS, root, level), 1);
                //Check that the super class is known
                if(ext.get(root.getChildren().get(1).getValue().toString()) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown super class " + root.getChildren().get(1).getValue().toString());
                root.getChildren().get(0).addProp("type", root.getChildren().get(0).getValue().toString());
                //Put "self" everywhere in this class
-               root.scope.put(ScopeItem.FIELD + "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1));
+               root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1));
                //Check for extends-loop
                if(isSameOrChild(root.getChildren().get(1).getValue().toString(), root.getChildren().get(0).getValue().toString()))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " defines an extends-loop");
                break;
             case SymbolValue.OBJECT_IDENTIFIER:
                //Set the type of this node from the scope
-               si = root.scope.get(ScopeItem.FIELD + root.getValue().toString());
+               si = root.scope.get(ScopeItem.FIELD, root.getValue().toString());
                if(si != null)
                   root.addProp("type", getNodeType(si.userType, -1));
                //Skip a call
                if(parent.stype.equals("call"))
                   break;
-               if(root.scope.get(ScopeItem.FIELD + root.getValue().toString()) == null && root.scope.get(ScopeItem.METHOD + root.getValue().toString()) == null &&
-                        root.scope.get(ScopeItem.CLASS + root.getValue().toString()) == null)
+               if(root.scope.get(ScopeItem.FIELD, root.getValue().toString()) == null && root.scope.get(ScopeItem.METHOD, root.getValue().toString()) == null &&
+                        root.scope.get(ScopeItem.CLASS, root.getValue().toString()) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error undefined used object " + root.getValue().toString());
                break;
             default:
@@ -344,38 +343,39 @@ public class Analyzer {
                throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine symbol '" +
                         root.getChildren().get(0).getValue().toString() + "' here");
             si.level = level;
-            root.scope.put(ScopeItem.METHOD + root.getChildren().get(0).getValue().toString(), si);
-            parent.scope.put(ScopeItem.METHOD + root.getChildren().get(0).getValue().toString(), si);
+            root.scope.putAbove(ScopeItem.METHOD, root.getChildren().get(0).getValue().toString(), si, 1);
             if(root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).itype == SymbolValue.TYPE_IDENTIFIER &&
-                     root.scope.get(ScopeItem.CLASS + root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue().toString()) == null)
+                     root.scope.get(ScopeItem.CLASS, root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue().toString()) == null)
                throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown return type " +
                         root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue() + "for method");
          } else {
             if(root.stype.equals("field")) {
                //Check override higher only
-               si = root.scope.get(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString());
+               si = root.scope.get(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString());
                if(si != null && si.level == level)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine symbol " +
                            root.getChildren().get(0).getValue().toString() + " here");
             }
             if(root.stype.equals("formal") || root.stype.equals("field") || root.stype.equals("let")) {
                //Check do not override 'self'
-               si = root.scope.get(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString());
+               si = root.scope.get(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString());
                if(si != null && si.level == -1)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can never define symbol 'self'");
             }
             switch(root.stype) {
                case "formal":
-                  gp.scope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level));
-               case "field": //Fallthrough
-                  parent.scope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level));
-               case "let": //Fallthrough
-                  root.scope.put(ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(),
+                  root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level), 2);
+                  break;
+               case "field":
+                  root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level), 1);
+                  break;
+               case "let":
+                  root.scope.put(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
                            new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level));
                   if(root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
-                           root.scope.get(ScopeItem.CLASS + root.getChildren().get(1).getValue().toString()) == null)
+                           root.scope.get(ScopeItem.CLASS, root.getChildren().get(1).getValue().toString()) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " +
                            root.getChildren().get(1).getValue() + "for declared variable");
                   break;
@@ -386,7 +386,7 @@ public class Analyzer {
       }
       
       for(ASTNode r : root.getChildren()) {
-         regScope(r, root, parent, level + 1);
+         regScope(r, root, level + 1);
       }
    }
    

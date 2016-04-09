@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 
-import be.ac.ulg.vsop.analyzer.ScopeItem;
+import be.ac.ulg.vsop.analyzer.Scope;
 import be.ac.ulg.vsop.lexer.Symbol;
 
 
@@ -17,7 +17,7 @@ public class ASTNode {
    public String stype;
    private Object value;
    private HashMap<String, Object> prop;
-   public HashMap<String, ScopeItem> scope; //Keys ought to be prefixed by field or method
+   public Scope scope; //Keys ought to be prefixed by field or method
    
    /**
     * Creates a node from a terminal type.
@@ -27,7 +27,7 @@ public class ASTNode {
    public ASTNode(int itype, Object value) {
       children = new ArrayList<ASTNode>();
       prop = new HashMap<String, Object>();
-      scope = new HashMap<String, ScopeItem>();
+      scope = new Scope();
       ending = true;
       this.itype = itype;
       this.stype = "";
@@ -44,7 +44,7 @@ public class ASTNode {
    public ASTNode(String stype, Object value) {
       children = new ArrayList<ASTNode>();
       prop = new HashMap<String, Object>();
-      scope = new HashMap<String, ScopeItem>();
+      scope = new Scope();
       ending = false;
       this.itype = -1;
       this.stype = stype;
