@@ -3,8 +3,7 @@ package be.ac.ulg.vsop.analyzer;
 import java.util.HashMap;
 import java.util.Set;
 
-import org.llvm.binding.LLVMLibrary;
-import org.llvm.binding.LLVMLibrary.LLVMTypeRef;
+import org.llvm.binding.LLVMLibrary.LLVMValueRef;
 
 import be.ac.ulg.vsop.codegen.ClassRecord;
 
@@ -12,8 +11,8 @@ import be.ac.ulg.vsop.codegen.ClassRecord;
 public class Scope {
    
    private HashMap<String, ScopeItem> sc, sm, sf;
-   private HashMap<String, LLVMLibrary.LLVMTypeRef> cs;
-   private HashMap<String, ClassRecord> cv;
+   private HashMap<String, ClassRecord> cs;
+   private HashMap<String, LLVMValueRef> cv;
    private Scope p;
    
    /**
@@ -23,8 +22,8 @@ public class Scope {
       sc = new HashMap<String, ScopeItem>();
       sm = new HashMap<String, ScopeItem>();
       sf = new HashMap<String, ScopeItem>();
-      cs = new HashMap<String, LLVMLibrary.LLVMTypeRef>();
-      cv = new HashMap<String, ClassRecord>();
+      cs = new HashMap<String, ClassRecord>();
+      cv = new HashMap<String, LLVMValueRef>();
       p = null;
    }
    
@@ -36,8 +35,8 @@ public class Scope {
       sc = new HashMap<String, ScopeItem>();
       sm = new HashMap<String, ScopeItem>();
       sf = new HashMap<String, ScopeItem>();
-      cs = new HashMap<String, LLVMLibrary.LLVMTypeRef>();
-      cv = new HashMap<String, ClassRecord>();
+      cs = new HashMap<String, ClassRecord>();
+      cv = new HashMap<String, LLVMValueRef>();
       this.p = p;
    }
    
@@ -123,10 +122,10 @@ public class Scope {
             sm.put(name, (ScopeItem) sci);
             break;
          case ScopeItem.LLVMTYPE:
-            cs.put(name, (LLVMTypeRef) sci);
+            cs.put(name, (ClassRecord) sci);
             break;
          case ScopeItem.LLVMVALUE:
-            cv.put(name, (ClassRecord) sci);
+            cv.put(name, (LLVMValueRef) sci);
             break;
          default:
             break;

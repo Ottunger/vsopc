@@ -82,8 +82,8 @@ public class LLVMGen {
                do {
                   vclass = ast.scope.get(ScopeItem.CLASS, type).userType;
                   for(String fname : vclass.scope.fieldSet()) {
-                     if(!fields.contains(fname)) {
-                        t = llvmType(root, vclass.scope.get(ScopeItem.FIELD, fname).userType.getProp("type").toString());
+                     if(!fname.equals("self") && !fields.contains(fname)) {
+                        t = llvmType(ast, vclass.scope.get(ScopeItem.FIELD, fname).userType.getProp("type").toString());
                         if(t != null) {
                            fields.add(fname);
                            tps.add(t);
@@ -100,7 +100,7 @@ public class LLVMGen {
                //Add init method for this class
                type = root.getChildren().get(0).getValue().toString();
                ptr = Pointer.allocateArray(LLVMTypeRef.class, 1);
-               ptr.set(0, llvmType(root, type));
+               ptr.set(0, LLVMLibrary.LLVMPointerType(st, 1));
                fsig = LLVMLibrary.LLVMFunctionType(LLVMLibrary.LLVMVoidType(), ptr, 1, 0); //Method sig, ie: void Class<init>(Class *this);
                fbody = LLVMLibrary.LLVMAddFunction(m, Pointer.allocateArray(Byte.class, 6), fsig); //Method body, will allocate all fields.
                ast.scope.put(ScopeItem.LLVMVALUE, ScopeItem.METHOD + type + "<init>", fbody);
@@ -113,8 +113,9 @@ public class LLVMGen {
                //Build "super();" call
                if(!ext.get(type).equals("Object")) {
                   args = Pointer.allocate(LLVMValueRef.class);
-                  args.set(LLVMLibrary.LLVMGetParam(fbody, 0));
-                  LLVMLibrary.LLVMBuildCall(builder, (LLVMValueRef) ast.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + ext.get(type)), args, 1,
+                  args.set(LLVMLibrary.LLVMBuildCast(builder, LLVMLibrary.LLVMOpcode.LLVMAnd, LLVMLibrary.LLVMGetParam(fbody, 0),
+                           ((ClassRecord) ast.scope.getLLVM(ScopeItem.LLVMTYPE, ext.get(type))).st, Pointer.allocateArray(Byte.class, 6)));
+                  LLVMLibrary.LLVMBuildCall(builder, (LLVMValueRef) ast.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + ext.get(type) + "<init>"), args, 1,
                            Pointer.allocateArray(Byte.class, 6));
                }
                break;
