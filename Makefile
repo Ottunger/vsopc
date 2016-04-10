@@ -10,7 +10,8 @@ install-tools:
 	sudo apt-get update
 	sudo apt-get install -y oracle-java8-installer
 	tar -xf llvm-3.2.src.tar.gz
-	cd llvm-3.2.src; sudo make install
+	cd llvm-3.2.src; ./configure --enable-shared; sudo make install-bytecode
+	sudo rm -f /usr/local/lib/libLLVM-3.2.so
 	sudo ln -s /usr/local/lib/libLLVM-3.2svn.so /usr/local/lib/libLLVM-3.2.so
 	
 vsopc:

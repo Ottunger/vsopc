@@ -2,7 +2,6 @@ package be.ac.ulg.vsop.codegen;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 
 import org.bridj.Pointer;
 import org.llvm.binding.LLVMLibrary;
@@ -11,7 +10,6 @@ import org.llvm.binding.LLVMLibrary.LLVMTypeRef;
 import org.llvm.binding.LLVMLibrary.LLVMValueRef;
 
 import be.ac.ulg.vsop.analyzer.Analyzer;
-import be.ac.ulg.vsop.analyzer.Scope;
 import be.ac.ulg.vsop.analyzer.ScopeItem;
 import be.ac.ulg.vsop.parser.ASTNode;
 import be.ac.ulg.vsop.parser.SymbolValue;
@@ -20,7 +18,6 @@ import be.ac.ulg.vsop.parser.SymbolValue;
 public class LLVMGen {
    
    private ASTNode ast;
-   private Scope rscope;
    private HashMap<String, String> ext;
    private LLVMModuleRef m;
    
@@ -32,11 +29,6 @@ public class LLVMGen {
    public LLVMGen(ASTNode root, HashMap<String, String> ext) {
       ast = root;
       this.ext = ext;
-      rscope = root.scope;
-      
-      Pointer<Character> mname = Pointer.allocateArray(Character.class, 4);
-      mname.setChars("vsop".toCharArray());
-      m = LLVMLibrary.LLVMModuleCreateWithName(mname.as(Byte.class));
    }
    
    /**
@@ -47,6 +39,11 @@ public class LLVMGen {
       //Use stdout
       if (fd < 0)
          fd = 1;
+      
+      //Prepare the main module anew
+      Pointer<Character> mname = Pointer.allocateArray(Character.class, 4);
+      mname.setChars("vsop".toCharArray());
+      m = LLVMLibrary.LLVMModuleCreateWithName(mname.as(Byte.class));
       
       //From a first pass, generate the structures that class rely are
       genStructures(ast, true, false);
@@ -70,9 +67,10 @@ public class LLVMGen {
       LLVMTypeRef t, st, fsig;
       LLVMValueRef fbody;
       LLVMLibrary.LLVMBuilderRef builder = null;
+      ArrayList<String> fields;
       ArrayList<LLVMTypeRef> tps;
       Pointer<LLVMTypeRef> ptr;
-      HashSet<String> fields;
+      Pointer<LLVMValueRef> args;
       
       if(!second && root.ending) {
          switch(root.itype) {
@@ -80,12 +78,12 @@ public class LLVMGen {
                //Create a type for this structure
                type = root.getChildren().get(0).getValue().toString();
                tps = new ArrayList<LLVMTypeRef>();
-               fields = new HashSet<String>();
+               fields = new ArrayList<String>();
                do {
-                  vclass = rscope.get(ScopeItem.CLASS, type).userType;
+                  vclass = ast.scope.get(ScopeItem.CLASS, type).userType;
                   for(String fname : vclass.scope.fieldSet()) {
                      if(!fields.contains(fname)) {
-                        t = llvmType(root, root.scope.get(ScopeItem.FIELD, fname).userType.getProp("type").toString());
+                        t = llvmType(root, vclass.scope.get(ScopeItem.FIELD, fname).userType.getProp("type").toString());
                         if(t != null) {
                            fields.add(fname);
                            tps.add(t);
@@ -95,24 +93,30 @@ public class LLVMGen {
                } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
                Pointer<LLVMTypeRef> types = Pointer.allocateArray(LLVMTypeRef.class, tps.size());
                for(int i = 0; i < tps.size(); i++)
-                  types.set(i, tps.get(i));
+                  types.set(i, tps.get(tps.size() - 1 - i)); //Return the array. This will allow for constructors to use a call like "super();"
                st = LLVMLibrary.LLVMStructType(types, tps.size(), 1);
                //Add in LLVM IR code this structure type as a global
-               type = root.getChildren().get(0).getValue().toString();
-               Pointer<Character> gname = Pointer.allocateArray(Character.class, type.length());
-               gname.setChars(type.toCharArray());
-               LLVMLibrary.LLVMAddGlobal(m, st, gname.as(Byte.class));
-               root.scope.putAbove(ScopeItem.LLVMTYPE, type, st, 1);
+               LLVMLibrary.LLVMAddGlobal(m, st, Pointer.allocateArray(Byte.class, 6));
                //Add init method for this class
+               type = root.getChildren().get(0).getValue().toString();
                ptr = Pointer.allocateArray(LLVMTypeRef.class, 1);
-               ptr.set(0, llvmType(root, root.getChildren().get(0).getValue().toString()));
-               fsig = LLVMLibrary.LLVMFunctionType(LLVMLibrary.LLVMVoidType(), ptr, 1, 0);
-               fbody = LLVMLibrary.LLVMAddFunction(m, Pointer.allocateArray(Byte.class, 6), fsig);
-               root.scope.putAbove(ScopeItem.LLVMVALUE, ScopeItem.METHOD + type + "<init>", fbody, 1);
+               ptr.set(0, llvmType(root, type));
+               fsig = LLVMLibrary.LLVMFunctionType(LLVMLibrary.LLVMVoidType(), ptr, 1, 0); //Method sig, ie: void Class<init>(Class *this);
+               fbody = LLVMLibrary.LLVMAddFunction(m, Pointer.allocateArray(Byte.class, 6), fsig); //Method body, will allocate all fields.
+               ast.scope.put(ScopeItem.LLVMVALUE, ScopeItem.METHOD + type + "<init>", fbody);
                //Prepare builder so that to send it to pass
                LLVMLibrary.LLVMBasicBlockRef bb = LLVMLibrary.LLVMAppendBasicBlock(fbody, Pointer.allocateArray(Byte.class, 6));
                builder = LLVMLibrary.LLVMCreateBuilder();
                LLVMLibrary.LLVMPositionBuilderAtEnd(builder, bb);
+               //Save this class for this build
+               ast.scope.put(ScopeItem.LLVMTYPE, type, new ClassRecord(st, fields, tps, fbody, builder));
+               //Build "super();" call
+               if(!ext.get(type).equals("Object")) {
+                  args = Pointer.allocate(LLVMValueRef.class);
+                  args.set(LLVMLibrary.LLVMGetParam(fbody, 0));
+                  LLVMLibrary.LLVMBuildCall(builder, (LLVMValueRef) ast.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + ext.get(type)), args, 1,
+                           Pointer.allocateArray(Byte.class, 6));
+               }
                break;
             default:
                break;
@@ -123,9 +127,9 @@ public class LLVMGen {
          for(ASTNode r : root.getChildren()) {
             genStructures(r, false, second);
          }
-      } else if(second){
+      } else if(second) {
          for(ASTNode r : root.getChildren()) {
-            genFunctions(type, r, builder);
+            genFunctions(type, r);
          }
       }
    }
@@ -143,14 +147,14 @@ public class LLVMGen {
             return LLVMLibrary.LLVMInt32Type();
          case "bool":
             return LLVMLibrary.LLVMInt8Type();
-         case "string":
-            //Pointer to well known String class instance
+         case "String":
+            //Pointer to well known String class instance, which is actually C-like string
             return LLVMLibrary.LLVMPointerType(LLVMLibrary.LLVMInt8Type(), 1);
          case "unit":
             return LLVMLibrary.LLVMInt8Type();
          default:
             //Is a pointer, assume we are 32-bit arch
-            return LLVMLibrary.LLVMPointerType((LLVMTypeRef) root.scope.getLLVM(ScopeItem.LLVMTYPE, type), 1);
+            return LLVMLibrary.LLVMPointerType(((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, type)).st, 1);
       }
    }
 
@@ -158,22 +162,21 @@ public class LLVMGen {
     * Generate functions into builder.
     * @param cname Class name for the following methods.
     * @param root Where we are.
-    * @param initb Builder for init function.
     */
-   private void genFunctions(String cname, ASTNode root, LLVMLibrary.LLVMBuilderRef initb) {
+   private void genFunctions(String cname, ASTNode root) {
       boolean has;
       ASTNode fn;
-      Pointer<Character> gname;
       Pointer<LLVMTypeRef> types;
       LLVMTypeRef fsig;
       LLVMValueRef fbody, asgn;
+      LLVMLibrary.LLVMBuilderRef initb = ((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).initb;
 
       if(root.ending == false) {
          switch(root.stype) {
             case "method":
                //As methods are ALWAYS after fields, buidl the end of <init> at first method
                if(initb != null) {
-                  LLVMLibrary.LLVMBuildRet(initb, (LLVMValueRef) root.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.FIELD + "self"));
+                  LLVMLibrary.LLVMBuildRet(initb, ((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).fbody);
                   //This creates several returns at end of function, but, who cares?
                }
 
@@ -195,16 +198,15 @@ public class LLVMGen {
                fsig = LLVMLibrary.LLVMFunctionType(llvmType(root, root.getProp("type").toString()), types,
                        has? 1 + root.getChildren().get(1).getChildren().size() : 1, 0);
                //Name the method as global function and register it
-               gname = Pointer.allocateArray(Character.class, cname.length() + root.getChildren().get(0).getValue().toString().length());
-               gname.setChars(LLVMGen.catChars(cname.toCharArray(), root.getChildren().get(0).getValue().toString().toCharArray()));
-               fbody = LLVMLibrary.LLVMAddFunction(m, gname.as(Byte.class), fsig);
-               root.scope.putAbove(ScopeItem.LLVMVALUE, ScopeItem.METHOD + cname + root.getChildren().get(0).getValue().toString(), fbody, 4); //4 is enough to reach top
+               fbody = LLVMLibrary.LLVMAddFunction(m, Pointer.allocateArray(Byte.class, 6), fsig);
+               ast.scope.put(ScopeItem.LLVMVALUE, ScopeItem.METHOD + cname + root.getChildren().get(0).getValue().toString(), fbody);
                //Register params for the build of body
                root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + "self", LLVMLibrary.LLVMGetParam(fbody, 0));
                if(has) {
                   ASTNode fms = root.getChildren().get(1);
                   for(int i = 0; i < fms.getChildren().size(); i++)
-                     root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + fms.getChildren().get(i).getChildren().get(0).getValue().toString(), LLVMLibrary.LLVMGetParam(fbody, i + 1));
+                     root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + fms.getChildren().get(i).getChildren().get(0).getValue().toString(),
+                              LLVMLibrary.LLVMGetParam(fbody, i + 1));
                }
                //Add method body
                LLVMLibrary.LLVMBasicBlockRef bb = LLVMLibrary.LLVMAppendBasicBlock(fbody, Pointer.allocateArray(Byte.class, 6));
@@ -220,8 +222,11 @@ public class LLVMGen {
                   //Default initialized
                   asgn = getDefaultForType(root, root.getChildren().get(1).getProp("type").toString(), initb);
                }
-               LLVMLibrary.LLVMBuildStore(initb, buildBody(cname, root.getChildren().get(0), initb), asgn);
-               root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), asgn);
+               fbody = LLVMLibrary.LLVMGetParam(((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).fbody, 0);
+               LLVMLibrary.LLVMBuildStore(initb, asgn, LLVMLibrary.LLVMBuildAdd(initb, fbody, LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(),
+                        ((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).shift.get(root.getChildren().get(0).getValue().toString()), 0),
+                        Pointer.allocateArray(Byte.class, 6)));
+               root.scope.putAbove(ScopeItem.LLVMVALUE, ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), asgn, 1); //Register for the class
                break;
             default:
                break;
@@ -236,25 +241,25 @@ public class LLVMGen {
     * @param b Builder to build in.
     */
    private LLVMValueRef getDefaultForType(ASTNode root, String type, LLVMLibrary.LLVMBuilderRef b) {
+      LLVMTypeRef t;
       LLVMValueRef tmp;
-      Pointer<Byte> ptr;
       
       switch (type) {
          case "int32":
             return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), 0, 1);
          case "bool":
             return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
-         case "string":
-            //Pointer to well known String class instance
-            tmp = LLVMLibrary.LLVMBuildMalloc(b, llvmType(root, "string"), Pointer.allocateArray(Byte.class, 6));
-            ptr = Pointer.allocateArray(Byte.class, 1);
-            ptr.set(0, (byte) 0);
+         case "String":
+            //Pointer to well known String class instance, array of 1 zeroed-byte.
+            t = LLVMLibrary.LLVMArrayType(LLVMLibrary.LLVMInt8Type(), 1);
+            tmp = LLVMLibrary.LLVMBuildMalloc(b, t, Pointer.allocateArray(Byte.class, 6));
+            LLVMLibrary.LLVMBuildStore(b, LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1), tmp);
             return tmp;
          case "unit":
             return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1);
          default:
             //Is a pointer, assume we are 32-bit arch
-            return LLVMLibrary.LLVMConstPointerNull((LLVMTypeRef) root.scope.getLLVM(ScopeItem.LLVMTYPE, type));
+            return LLVMLibrary.LLVMConstPointerNull(((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, type)).st);
       }
    }
 
@@ -267,10 +272,10 @@ public class LLVMGen {
    private LLVMLibrary.LLVMValueRef buildBody(String cname, ASTNode root, LLVMLibrary.LLVMBuilderRef b) {
       boolean has;
       String loop;
+      LLVMTypeRef t;
       LLVMValueRef tmp;
       LLVMLibrary.LLVMBasicBlockRef b1, b2;
       LLVMLibrary.LLVMBuilderRef bd1, bd2;
-      Pointer<Character> str;
       Pointer<LLVMValueRef> ptr;
       
       if(root.ending) {
@@ -310,7 +315,7 @@ public class LLVMGen {
             case SymbolValue.ASSIGN:
                return buildBody(cname, root.getChildren().get(0), b);
             case SymbolValue.NEW:
-               tmp = LLVMLibrary.LLVMBuildMalloc(b, (LLVMTypeRef) root.scope.getLLVM(ScopeItem.LLVMTYPE, root.getProp("type").toString()),
+               tmp = LLVMLibrary.LLVMBuildMalloc(b, ((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, root.getProp("type").toString())).st,
                         Pointer.allocateArray(Byte.class, 6));
                ptr = Pointer.allocate(LLVMValueRef.class);
                ptr.set(0, tmp);
@@ -319,9 +324,16 @@ public class LLVMGen {
             case SymbolValue.INTEGER_LITERAL:
                return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), (int)root.getValue(), 1);
             case SymbolValue.STRING_LITERAL:
-               str = Pointer.allocateArray(Character.class, root.getValue().toString().length() + 1); //Make room for empty char \0
-               str.setChars(root.getValue().toString().toCharArray());
-               return LLVMLibrary.LLVMConstString(str.as(Byte.class), root.getValue().toString().length(), 1);
+               //Build the string on the heap, one char at a time sorry.
+               t = LLVMLibrary.LLVMArrayType(LLVMLibrary.LLVMInt8Type(), root.getValue().toString().length() + 1);
+               tmp = LLVMLibrary.LLVMBuildMalloc(b, t, Pointer.allocateArray(Byte.class, 6));
+               for(int i = 0; i < root.getValue().toString().length(); i++)
+                  LLVMLibrary.LLVMBuildStore(b, LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), root.getValue().toString().charAt(i), 0),
+                           LLVMLibrary.LLVMBuildAdd(b, tmp, LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), i, 0), Pointer.allocateArray(Byte.class, 6)));
+               LLVMLibrary.LLVMBuildStore(b, LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt8Type(), 0, 1),
+                        LLVMLibrary.LLVMBuildAdd(b, tmp, LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), root.getValue().toString().length(), 0),
+                        Pointer.allocateArray(Byte.class, 6)));
+               return tmp;
             case SymbolValue.OBJECT_IDENTIFIER:
                //Find in cscope the return. We know the scope is OK, right?
                return (LLVMValueRef) root.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.FIELD + root.getValue().toString());
@@ -358,8 +370,8 @@ public class LLVMGen {
                do {
                   tmp = (LLVMValueRef) root.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + loop + root.getChildren().get(1).getValue().toString());
                   loop = ext.get(loop);
-               }while(tmp == null);
-               return LLVMLibrary.LLVMBuildCall(b, tmp, ptr, has? 1 + root.getChildren().size() : 1, Pointer.allocateArray(Byte.class, 6));
+               } while(tmp == null);
+               return LLVMLibrary.LLVMBuildCall(b, tmp, ptr, has? 1 + root.getChildren().get(2).getChildren().size() : 1, Pointer.allocateArray(Byte.class, 6));
             case "formal":
                return buildBody(cname, root.getChildren().get(0), b);
             case "assign":
@@ -406,21 +418,6 @@ public class LLVMGen {
                return null;
          }
       }
-   }
-
-   /**
-    * Merges two char arrays.
-    * @param a First.
-    * @param b Second.
-    * @return Merge.
-     */
-   private static char[] catChars(char[] a, char[] b) {
-      char[] ret = new char[a.length + b.length];
-      for(int i = 0; i < a.length; i++)
-         ret[i] = a[i];
-      for(int i = a.length; i < a.length + b.length; i++)
-         ret[i] = b[i - a.length];
-      return ret;
    }
 
 }

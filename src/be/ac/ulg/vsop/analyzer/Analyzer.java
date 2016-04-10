@@ -404,6 +404,9 @@ public class Analyzer {
                if(ext.get(root.getChildren().get(0).getValue().toString()) != null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " has been defined several times");
                ext.put(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getValue().toString());
+               //Cannot extend built-in class String
+               if(root.getChildren().get(1).getValue().toString().equals("String"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " cannot extend built-in class String");
                prim.put(root.getChildren().get(0).getValue().toString(), new HashMap<String, ScopeItem>());
                break;
             default:
