@@ -13,6 +13,9 @@ public class Analyzer {
    private HashMap<String, String> ext;
    
 
+   /**
+    * Creates an analyzer.
+    */
    public Analyzer() {
       ext = new HashMap<String, String>();
       prim = new HashMap<String, HashMap<String, ScopeItem>>();
@@ -21,6 +24,8 @@ public class Analyzer {
       ext.put("int32", Analyzer.EMPTY);
       ext.put("bool", Analyzer.EMPTY);
       ext.put("unit", Analyzer.EMPTY);
+      //There is one entry in $prim per recorded class, and it only registers their methods.
+      //This table is only used at first to ensure basic knowledge of everything.
       prim.put("Object", new HashMap<String, ScopeItem>());
       prim.put("String", new HashMap<String, ScopeItem>());
       prim.put("int32", new HashMap<String, ScopeItem>());
@@ -222,26 +227,22 @@ public class Analyzer {
                            getNodeType(root, 2) + " to " + getNodeType(root, 0));
                break;
             case "assign":
-               type = getNodeType(root, 1);
-               root.addProp("type", type);
+               root.addProp("type", getNodeType(root, 0));
                //Check that no assign to self
                if(root.getChildren().get(0).getValue().toString().equals("self"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
-               do {
-                  //Get scope of candidate
-                  s = scope.get(ScopeItem.CLASS, type);
-                  //Check that candidate and assigned are the same
-                  if(getNodeType(s.userType, -1).equals(getNodeType(root, 0)))
-                     break;
-               } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
-               if(type.equals(Analyzer.EMPTY))
+               //Check that assign a same typed-value or a parent-typed value
+               if(!isSameOrChild(getNodeType(root, 1), getNodeType(root, 0)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, 1) + " to " + getNodeType(root, 0));
                break;
             case "method":
                if(ext.get(getNodeType(root, -1)) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, -1));
-               if(!getNodeType(root, -1).equals(getNodeType(root, root.getChildren().size() - 1)))
+               //Currently, when a while is issued as last expression
+               if(getNodeType(root, root.getChildren().size() - 1).equals(Analyzer.EMPTY))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method cannot return anything as is");
+               if(!isSameOrChild(getNodeType(root, root.getChildren().size() - 1), getNodeType(root, -1)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method type is " + 
                            getNodeType(root, -1) + " but got " + getNodeType(root, root.getChildren().size() - 1));
             case "block":
@@ -266,24 +267,20 @@ public class Analyzer {
                }
                break;
             case "while":
+               root.addProp("type", Analyzer.EMPTY);
                if(!getNodeType(root, 0).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error while condition must be bool");
                break;
             case "let":
-               type = getNodeType(root, 2);
                if(ext.get(getNodeType(root, 1)) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 1));
-               do {
-                  //Get scope of candidate
-                  s = scope.get(ScopeItem.CLASS, type);
-                  //Check that candidate and assigned are the same
-                  if(getNodeType(s.userType, -1).equals(getNodeType(root, 1)))
-                     break;
-               } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
-               if(root.getChildren().size() > 3 && type.equals(Analyzer.EMPTY))
+               //Check in the assign part of the "let"
+               if(root.getChildren().size() > 3 && !isSameOrChild(getNodeType(root, 2), getNodeType(root, 1)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, 2) + " to " + getNodeType(root, 1));
-            case "uminus": //Fallthrough
+               root.addProp("type", getNodeType(root, root.getChildren().size() - 1));
+               break;
+            case "uminus":
                root.addProp("type", getNodeType(root, 0));
                break;
             default:
@@ -405,8 +402,9 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " has been defined several times");
                ext.put(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getValue().toString());
                //Cannot extend built-in class String
-               if(root.getChildren().get(1).getValue().toString().equals("String"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " cannot extend built-in class String");
+               if(root.getChildren().get(1).getValue().toString().equals("String") || root.getChildren().get(1).getValue().toString().equals("int32") ||
+                        root.getChildren().get(1).getValue().toString().equals("bool") || root.getChildren().get(1).getValue().toString().equals("unit"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " cannot extend built-in class or value");
                prim.put(root.getChildren().get(0).getValue().toString(), new HashMap<String, ScopeItem>());
                break;
             default:
