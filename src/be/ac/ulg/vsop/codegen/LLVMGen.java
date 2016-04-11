@@ -36,6 +36,11 @@ public class LLVMGen {
     * @param fd File descriptor of out. Set negative for stdout.
     */
    public void emit(int fd) {
+      LLVMTypeRef fsig;
+      LLVMValueRef fbody, tmp;
+      Pointer<Byte> gname;
+      Pointer<LLVMValueRef> ptr;
+      
       //Use stdout
       if (fd < 0)
          fd = 1;
@@ -50,6 +55,24 @@ public class LLVMGen {
       //From a second pass, generate the methods that are functions that have a pointer *self
       //Second pass is actually deeper in first pass
       genStructures(ast, true, true);
+      
+      //Build entry point, new Main().main(). Note that in LLVM the entry point is the function main().
+      fsig = LLVMLibrary.LLVMFunctionType(LLVMLibrary.LLVMInt32Type(), Pointer.allocateArray(LLVMTypeRef.class, 0), 0, 0);
+      gname = Pointer.allocateBytes(4);
+      gname.setBytes(new byte[] {'m', 'a', 'i', 'n'});
+      fbody = LLVMLibrary.LLVMAddFunction(m, gname, fsig);
+      LLVMLibrary.LLVMBasicBlockRef bb = LLVMLibrary.LLVMAppendBasicBlock(fbody, Pointer.allocateArray(Byte.class, 6));
+      LLVMLibrary.LLVMBuilderRef b = LLVMLibrary.LLVMCreateBuilder();
+      LLVMLibrary.LLVMPositionBuilderAtEnd(b, bb);
+      //Actually the LLVM main() code.
+      tmp = LLVMLibrary.LLVMBuildMalloc(b, ((ClassRecord) ast.scope.getLLVM(ScopeItem.LLVMTYPE, "Main")).st, Pointer.allocateArray(Byte.class, 6));
+      ptr = Pointer.allocate(LLVMValueRef.class);
+      ptr.set(0, tmp);
+      LLVMLibrary.LLVMBuildCall(b, (LLVMValueRef) ast.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + "Main<init>"), ptr, 1,
+               Pointer.allocateArray(Byte.class, 6));
+      //We're done, return :)
+      LLVMLibrary.LLVMBuildRet(b, LLVMLibrary.LLVMBuildCall(b, (LLVMValueRef) ast.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + "Mainmain"), ptr, 1,
+               Pointer.allocateArray(Byte.class, 6)));
       
       LLVMLibrary.LLVMWriteBitcodeToFD(m, fd, 1, 0);
       LLVMLibrary.LLVMDisposeModule(m);
@@ -113,6 +136,7 @@ public class LLVMGen {
                //Build "super();" call
                if(!ext.get(type).equals("Object")) {
                   args = Pointer.allocate(LLVMValueRef.class);
+                  //TODO: Find a dynamic cast that works!
                   args.set(LLVMLibrary.LLVMBuildCast(builder, LLVMLibrary.LLVMOpcode.LLVMAnd, LLVMLibrary.LLVMGetParam(fbody, 0),
                            ((ClassRecord) ast.scope.getLLVM(ScopeItem.LLVMTYPE, ext.get(type))).st, Pointer.allocateArray(Byte.class, 6)));
                   LLVMLibrary.LLVMBuildCall(builder, (LLVMValueRef) ast.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + ext.get(type) + "<init>"), args, 1,
@@ -320,8 +344,8 @@ public class LLVMGen {
                         Pointer.allocateArray(Byte.class, 6));
                ptr = Pointer.allocate(LLVMValueRef.class);
                ptr.set(0, tmp);
-               return LLVMLibrary.LLVMBuildCall(b, (LLVMValueRef) root.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + cname + "<init>"), ptr, 1,
-                        Pointer.allocateArray(Byte.class, 6));
+               return LLVMLibrary.LLVMBuildCall(b, (LLVMValueRef) root.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + root.getProp("type").toString() + "<init>"),
+                        ptr, 1, Pointer.allocateArray(Byte.class, 6));
             case SymbolValue.INTEGER_LITERAL:
                return LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(), (int)root.getValue(), 1);
             case SymbolValue.STRING_LITERAL:
