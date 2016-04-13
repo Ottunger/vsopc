@@ -105,6 +105,17 @@ public class Scope {
    }
    
    /**
+    * All method names.
+    * @return Set of methods.
+    */
+   public Set<String> methodSet() {
+      Set<String> st = sm.keySet();
+      if(p != null)
+         st.addAll(p.methodSet());
+      return st;
+   }
+   
+   /**
     * Registers an item.
     * @param type Type.
     * @param name Name.
