@@ -211,11 +211,6 @@ public class Analyzer {
                   }
                }
                break;
-            case "formal":
-               root.addProp("type", getNodeType(root, 0, true));
-               if(ext.get(getNodeType(root, 0, true)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 0, true));
-               break;
             case "field":
                //Here we can check no override of field
                type = root.scope.get(ScopeItem.FIELD, "self").userType.getProp("type").toString();
@@ -368,6 +363,10 @@ public class Analyzer {
                case "formal":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
                            new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level), 2);
+                  //Register the type because this is not acquired bottom-up while cross checking
+                  root.addProp("type", getNodeType(root, 1, false));
+                  if(ext.get(getNodeType(root, 1, false)) == null)
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 1, false));
                   break;
                case "field":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
