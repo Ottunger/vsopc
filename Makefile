@@ -10,7 +10,7 @@ install-tools:
 	sudo apt-get update
 	sudo apt-get install -y oracle-java8-installer
 	tar -xf llvm-3.2.src.tar.gz
-	cd llvm-3.2.src; ./configure --enable-shared; sudo make install-bytecode
+	cd llvm-3.2.src/Release+Asserts/lib; sudo cp libprofile_rt.so /usr/local/lib/; sudo cp LLVMHello.so /usr/local/lib/; sudo cp BugpointPasses.so /usr/local/lib/; sudo cp libLLVM-3.2svn.so /usr/local/lib/; sudo cp libLTO.so /usr/local/lib/;
 	sudo rm -f /usr/local/lib/libLLVM-3.2.so
 	sudo ln -s /usr/local/lib/libLLVM-3.2svn.so /usr/local/lib/libLLVM-3.2.so
 	

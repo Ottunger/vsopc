@@ -62,7 +62,7 @@ public class Analyzer {
          throw new Exception("1:1: semantics error no Main class");
       if((si = si.userType.scope.get(ScopeItem.METHOD, "main")) == null)
          throw new Exception("1:1: semantics error no main method");
-      if(si.formals != null || !getNodeType(si.userType, -1).equals("int32"))
+      if(si.formals != null || !getNodeType(si.userType, -1, false).equals("int32"))
          throw new Exception("1:1: semantics error bad main signature");
       //Check types
       checkTypes(root, root.scope);
@@ -72,17 +72,22 @@ public class Analyzer {
     * Reads the node or one of its children type.
     * @param root The node.
     * @param index -1 for itself, otherwise index of child.
+    * @param fonly Check only in fields.
     * @return Type.
     */
-   private String getNodeType(ASTNode root, int index) {
+   private String getNodeType(ASTNode root, int index, boolean fonly) throws Exception {
       ASTNode node = (index == -1)? root: root.getChildren().get(index);
       ScopeItem ret;
       if(node.itype == SymbolValue.OBJECT_IDENTIFIER) {
          ret = root.scope.get(ScopeItem.FIELD, node.getValue().toString());
+         if(ret == null && fonly)
+            throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error used symbol " + node.getValue().toString() +
+                     " not the way it was defined");
          if(ret == null)
             ret = root.scope.get(ScopeItem.METHOD, node.getValue().toString());
          if(ret == null)
-            ret = root.scope.get(ScopeItem.CLASS, node.getValue().toString());
+            throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error used symbol " + node.getValue().toString() +
+                     " not the way it was defined");
          return ASTNode.typeValue(ret.userType);
       } else {
          return node.getProp("type").toString();
@@ -98,7 +103,7 @@ public class Analyzer {
    private boolean isSameOrChild(String a, String b) {
       if(a.equals(b))
          return true;
-      while(!(a = ext.get(a)).equals(Analyzer.EMPTY)) {
+      while(!((a = ext.get(a)).equals(Analyzer.EMPTY))) {
          if(a.equals(b))
             return true;
       }
@@ -128,29 +133,29 @@ public class Analyzer {
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.NOT:
-               root.addProp("type", getNodeType(root, 0));
-               if(!getNodeType(root, 0).equals("int32") && !getNodeType(root, 0).equals("bool"))
+               root.addProp("type", getNodeType(root, 0, true));
+               if(!getNodeType(root, 0, true).equals("int32") && !getNodeType(root, 0, true).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '!' on this type");
                break;
             case SymbolValue.EQUAL:
-               root.addProp("type", getNodeType(root, 0));
-               meths = prim.get(getNodeType(root, 0));
+               root.addProp("type", "bool");
+               meths = prim.get(getNodeType(root, 0, true));
                /* Basic type if no registered method for this type */
-               if(meths != null && meths.size() == 0 && !getNodeType(root, 0).equals(getNodeType(root, 1)))
+               if(meths != null && meths.size() == 0 && !getNodeType(root, 0, true).equals(getNodeType(root, 1, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '=' on different primitive types");
                break;
             case SymbolValue.AND:
                root.addProp("type", "int32");
-               if(!getNodeType(root, 0).equals("int32") || !getNodeType(root, 1).equals("int32"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '&' on both int32 types");
-               if(!getNodeType(root, 0).equals("bool") || !getNodeType(root, 1).equals("bool"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '&' on both bool types");
+               if(!getNodeType(root, 0, true).equals("int32") && !getNodeType(root, 0, true).equals("bool"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and on something not int32 or bool");
+               if(!getNodeType(root, 0, true).equals(getNodeType(root, 1, true)))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and on different types");
                break;
             case SymbolValue.LOWER_EQUAL:
             case SymbolValue.LOWER:
                root.addProp("type", "bool");
-               if(!getNodeType(root, 0).equals("int32") || !getNodeType(root, 1).equals("int32"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator or not both int32 types");
+               if(!getNodeType(root, 0, true).equals("int32") || !getNodeType(root, 1, true).equals("int32"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on not both int32 types");
                break;
             case SymbolValue.PLUS:
             case SymbolValue.MINUS:
@@ -158,14 +163,14 @@ public class Analyzer {
             case SymbolValue.DIV:
             case SymbolValue.POW:
                root.addProp("type", "int32");
-               if(!getNodeType(root, 0).equals("int32") || !getNodeType(root, 1).equals("int32"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator or not both int32 types");
+               if(!getNodeType(root, 0, true).equals("int32") || !getNodeType(root, 1, true).equals("int32"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on not both int32 types");
                break;
             case SymbolValue.ISNULL:
                root.addProp("type", "bool");
                break;
             case SymbolValue.ASSIGN:
-               root.addProp("type", getNodeType(root, 0));
+               root.addProp("type", getNodeType(root, 0, true));
                break;
             case SymbolValue.NEW:
                root.addProp("type", root.getChildren().get(0).getValue().toString());
@@ -176,13 +181,13 @@ public class Analyzer {
       } else {
          switch(root.stype) {
             case "call":
-               type = getNodeType(root, 0);
+               type = getNodeType(root, 0, true);
                do {
                   //Get scope of callee
                   s = scope.get(ScopeItem.CLASS, type);
                   //Check that object type has methods
                   if(s == null || s.type != ScopeItem.CLASS)
-                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call a method on type " + getNodeType(root, 0));
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call a method on type " + getNodeType(root, 0, true));
                   //Check that this method is registered
                   if((t = s.userType.scope.get(ScopeItem.METHOD, root.getChildren().get(1).getValue().toString())) != null)
                      break;
@@ -190,16 +195,16 @@ public class Analyzer {
                //Check that this method is registered
                if((t = s.userType.scope.get(ScopeItem.METHOD, root.getChildren().get(1).getValue().toString())) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call method " +
-                           root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, 0));
+                           root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, 0, true));
                //Then our type is the one of the method
-               root.addProp("type", getNodeType(t.userType, -1));
+               root.addProp("type", getNodeType(t.userType, -1, false));
                //Check ok arguments
                if(((root.getChildren().size() == 2) != (t.formals == null)) || (root.getChildren().size() > 2 && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error wrong number of arguments to method " + root.getChildren().get(1).getValue());
                } else if(root.getChildren().size() > 2) {
                   for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
-                     String arg = getNodeType(root.getChildren().get(2), i);
-                     String formal = getNodeType(t.formals, i);
+                     String arg = getNodeType(root.getChildren().get(2), i, true);
+                     String formal = getNodeType(t.formals, i, true);
                      if(!isSameOrChild(arg, formal))
                         throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
                                  ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
@@ -207,9 +212,9 @@ public class Analyzer {
                }
                break;
             case "formal":
-               root.addProp("type", getNodeType(root, 0));
-               if(ext.get(getNodeType(root, 0)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 0));
+               root.addProp("type", getNodeType(root, 0, true));
+               if(ext.get(getNodeType(root, 0, true)) == null)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 0, true));
                break;
             case "field":
                //Here we can check no override of field
@@ -219,69 +224,69 @@ public class Analyzer {
                   if(scope.get(ScopeItem.CLASS, type).userType.scope.get(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) != null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine symbol '" + root.getChildren().get(0).getValue().toString() + "'here");
                }
-               root.addProp("type", getNodeType(root, 0));
-               if(ext.get(getNodeType(root, 0)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 0));
-               if(root.getChildren().size() > 2 && !getNodeType(root, 0).equals(getNodeType(root, 2)))
+               root.addProp("type", getNodeType(root, 0, true));
+               if(ext.get(getNodeType(root, 0, true)) == null)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 0, true));
+               if(root.getChildren().size() > 2 && !getNodeType(root, 0, true).equals(getNodeType(root, 2, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
-                           getNodeType(root, 2) + " to " + getNodeType(root, 0));
+                           getNodeType(root, 2, true) + " to " + getNodeType(root, 0, true));
                break;
             case "assign":
-               root.addProp("type", getNodeType(root, 0));
+               root.addProp("type", getNodeType(root, 0, true));
                //Check that no assign to self
                if(root.getChildren().get(0).getValue().toString().equals("self"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
                //Check that assign a same typed-value or a parent-typed value
-               if(!isSameOrChild(getNodeType(root, 1), getNodeType(root, 0)))
+               if(!isSameOrChild(getNodeType(root, 1, true), getNodeType(root, 0, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
-                           getNodeType(root, 1) + " to " + getNodeType(root, 0));
+                           getNodeType(root, 1, true) + " to " + getNodeType(root, 0, true));
                break;
             case "method":
-               if(ext.get(getNodeType(root, -1)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, -1));
+               if(ext.get(getNodeType(root, -1, false)) == null)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, -1, false));
                //Currently, when a while is issued as last expression
-               if(getNodeType(root, root.getChildren().size() - 1).equals(Analyzer.EMPTY))
+               if(getNodeType(root, root.getChildren().size() - 1, true).equals(Analyzer.EMPTY))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method cannot return anything as is");
-               if(!isSameOrChild(getNodeType(root, root.getChildren().size() - 1), getNodeType(root, -1)))
+               if(!isSameOrChild(getNodeType(root, root.getChildren().size() - 1, true), getNodeType(root, -1, false)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method type is " + 
-                           getNodeType(root, -1) + " but got " + getNodeType(root, root.getChildren().size() - 1));
+                           getNodeType(root, -1, false) + " but got " + getNodeType(root, root.getChildren().size() - 1, true));
             case "block":
-               root.addProp("type", getNodeType(root, root.getChildren().size() - 1));
+               root.addProp("type", getNodeType(root, root.getChildren().size() - 1, true));
                break;
             case "if":
-               if(!getNodeType(root, 0).equals("bool"))
+               if(!getNodeType(root, 0, true).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error if condition must be bool");
-               root.addProp("type", getNodeType(root, 1));
+               root.addProp("type", getNodeType(root, 1, true));
                if(root.getChildren().size() > 2) {
-                  if(getNodeType(root, 1).equals("unit") || getNodeType(root, 2).equals("unit"))
+                  if(getNodeType(root, 1, true).equals("unit") || getNodeType(root, 2, true).equals("unit"))
                      root.addProp("type", "unit");
                   else {
-                     if(isSameOrChild(getNodeType(root, 1), getNodeType(root, 2)))
-                        root.addProp("type", getNodeType(root, 2));
-                     else if(isSameOrChild(getNodeType(root, 2), getNodeType(root, 1)))
-                        root.addProp("type", getNodeType(root, 1));
+                     if(isSameOrChild(getNodeType(root, 1, true), getNodeType(root, 2, true)))
+                        root.addProp("type", getNodeType(root, 2, true));
+                     else if(isSameOrChild(getNodeType(root, 2, true), getNodeType(root, 1, true)))
+                        root.addProp("type", getNodeType(root, 1, true));
                      else
                         throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error if branches are typed as " + 
-                                 getNodeType(root, 1) + " and " + getNodeType(root, 2));
+                                 getNodeType(root, 1, true) + " and " + getNodeType(root, 2, true));
                   }
                }
                break;
             case "while":
                root.addProp("type", Analyzer.EMPTY);
-               if(!getNodeType(root, 0).equals("bool"))
+               if(!getNodeType(root, 0, true).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error while condition must be bool");
                break;
             case "let":
-               if(ext.get(getNodeType(root, 1)) == null)
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 1));
+               if(ext.get(getNodeType(root, 1, false)) == null)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 1, false));
                //Check in the assign part of the "let"
-               if(root.getChildren().size() > 3 && !isSameOrChild(getNodeType(root, 2), getNodeType(root, 1)))
+               if(root.getChildren().size() > 3 && !isSameOrChild(getNodeType(root, 2, true), getNodeType(root, 1, false)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
-                           getNodeType(root, 2) + " to " + getNodeType(root, 1));
-               root.addProp("type", getNodeType(root, root.getChildren().size() - 1));
+                           getNodeType(root, 2, true) + " to " + getNodeType(root, 1, false));
+               root.addProp("type", getNodeType(root, root.getChildren().size() - 1, true));
                break;
             case "uminus":
-               root.addProp("type", getNodeType(root, 0));
+               root.addProp("type", getNodeType(root, 0, true));
                break;
             default:
                break;
@@ -321,7 +326,7 @@ public class Analyzer {
                //Set the type of this node from the scope
                si = root.scope.get(ScopeItem.FIELD, root.getValue().toString());
                if(si != null)
-                  root.addProp("type", getNodeType(si.userType, -1));
+                  root.addProp("type", getNodeType(si.userType, -1, false));
                //Skip a call
                if(parent.stype.equals("call"))
                   break;
@@ -451,7 +456,7 @@ public class Analyzer {
     * @param m Method name.
     * @param n Name of the class were defined.
     */
-   private boolean differentMethodAbove(ASTNode root, String m, String n) {
+   private boolean differentMethodAbove(ASTNode root, String m, String n) throws Exception {
       ScopeItem t;
       
       while(!n.equals(Analyzer.EMPTY)) {
@@ -467,8 +472,8 @@ public class Analyzer {
                return true;
             } else if(root.getChildren().size() > 3) {
                for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
-                  String arg = getNodeType(root.getChildren().get(2), i);
-                  String formal = getNodeType(t.formals, i);
+                  String arg = getNodeType(root.getChildren().get(2), i, true);
+                  String formal = getNodeType(t.formals, i, true);
                   if(!isSameOrChild(arg, formal))
                      return true;
                }
