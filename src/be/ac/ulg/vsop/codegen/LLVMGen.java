@@ -199,7 +199,7 @@ public class LLVMGen {
       if(root.ending == false) {
          switch(root.stype) {
             case "method":
-               //As methods are ALWAYS after fields, buidl the end of <init> at first method
+               //As methods are ALWAYS after fields, build the end of <init> at first method
                if(initb != null) {
                   LLVMLibrary.LLVMBuildRet(initb, ((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).fbody);
                   //This creates several returns at end of function, but, who cares?

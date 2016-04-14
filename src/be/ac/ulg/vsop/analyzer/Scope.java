@@ -5,6 +5,7 @@ import java.util.Set;
 
 import org.llvm.binding.LLVMLibrary.LLVMValueRef;
 
+import be.ac.ulg.vsop.codegen.CClassRecord;
 import be.ac.ulg.vsop.codegen.ClassRecord;
 
 
@@ -13,6 +14,7 @@ public class Scope {
    private HashMap<String, ScopeItem> sc, sm, sf;
    private HashMap<String, ClassRecord> cs;
    private HashMap<String, LLVMValueRef> cv;
+   private HashMap<String, CClassRecord> ccs;
    private Scope p;
    
    /**
@@ -24,6 +26,7 @@ public class Scope {
       sf = new HashMap<String, ScopeItem>();
       cs = new HashMap<String, ClassRecord>();
       cv = new HashMap<String, LLVMValueRef>();
+      ccs = new HashMap<String, CClassRecord>();
       p = null;
    }
    
@@ -37,6 +40,7 @@ public class Scope {
       sf = new HashMap<String, ScopeItem>();
       cs = new HashMap<String, ClassRecord>();
       cv = new HashMap<String, LLVMValueRef>();
+      ccs = new HashMap<String, CClassRecord>();
       this.p = p;
    }
    
@@ -83,6 +87,9 @@ public class Scope {
             break;
          case ScopeItem.LLVMVALUE:
             sci = cv.get(name);
+            break;
+         case ScopeItem.CTYPE:
+            sci = ccs.get(name);
             break;
          default:
             break;
@@ -137,6 +144,9 @@ public class Scope {
             break;
          case ScopeItem.LLVMVALUE:
             cv.put(name, (LLVMValueRef) sci);
+            break;
+         case ScopeItem.CTYPE:
+            ccs.put(name, (CClassRecord) sci);
             break;
          default:
             break;

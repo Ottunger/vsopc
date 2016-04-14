@@ -376,9 +376,9 @@ public class Analyzer {
                   root.scope.put(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
                            new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level));
                   if(root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
-                           root.scope.get(ScopeItem.CLASS, root.getChildren().get(1).getValue().toString()) == null)
+                           ext.get(root.getChildren().get(1).getValue().toString()) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " +
-                           root.getChildren().get(1).getValue() + "for declared variable");
+                           root.getChildren().get(1).getValue() + " for declared variable");
                   break;
                default:
                   break;
