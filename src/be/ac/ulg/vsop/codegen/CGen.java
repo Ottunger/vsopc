@@ -64,6 +64,9 @@ public class CGen {
          sb.insert(0, ent.getKey() + " = \"" + ent.getValue() + "\"; ");
       }
       
+      //Build entry point, new Main().main().
+      sb.append("int main() { return Main_main(Main_init(((Main_struct*)malloc(sizeof(Main_struct))))); }");
+      
       try {
          o.write(sb.toString().getBytes());
       } catch(IOException e) {
@@ -160,6 +163,7 @@ public class CGen {
                   if(!ext.get(type).equals("Object")) {
                      sb.append(ext.get(type) + "_init(self); ");
                   }
+                  sb.append("self->_vtable = &" + type + "_static_vtable; ");
                   //Register class then close so far the init, after having saved where to insert.
                   ast.scope.put(ScopeItem.CTYPE, type, new CClassRecord(fields, types, methods, sigs, sb.length()));
                   sb.append("return self; } ");
