@@ -240,7 +240,7 @@ public class LLVMGen {
                LLVMLibrary.LLVMBuildRet(builder, buildBody(cname, has? root.getChildren().get(2) : root.getChildren().get(1), builder));
                break;
             case "field":
-               if(root.getChildren().size() > 3) {
+               if(root.getChildren().size() > 2) {
                   //Initialized
                   asgn = buildBody(cname, root.getChildren().get(2), initb);
                } else {

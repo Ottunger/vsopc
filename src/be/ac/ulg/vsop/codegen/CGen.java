@@ -5,13 +5,9 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
-import org.bridj.Pointer;
-import org.llvm.binding.LLVMLibrary;
-import org.llvm.binding.LLVMLibrary.LLVMTypeRef;
-import org.llvm.binding.LLVMLibrary.LLVMValueRef;
 
 import be.ac.ulg.vsop.analyzer.Analyzer;
 import be.ac.ulg.vsop.analyzer.ScopeItem;
@@ -21,6 +17,7 @@ import be.ac.ulg.vsop.parser.SymbolValue;
 
 public class CGen {
    
+   private int where;
    private ASTNode ast;
    private HashMap<String, String> ext, strs;
    StringBuilder sb;
@@ -41,8 +38,6 @@ public class CGen {
     * @param o PrintWriter to stream.
     */
    public void emit(OutputStream o) {
-      int where = 0;
-      
       classes = ext.keySet();
       classes.remove("Object");
       classes.remove("String");
@@ -65,7 +60,9 @@ public class CGen {
       genStructures(ast, true, true);
       
       //Create global strings constants.
-      //TODO write strings
+      for(Map.Entry<String, String> ent : strs.entrySet()) {
+         sb.insert(0, ent.getKey() + " = \"" + ent.getValue() + "\"; ");
+      }
       
       try {
          o.write(sb.toString().getBytes());
@@ -243,7 +240,7 @@ public class CGen {
                }
                if(sigs.get(i).pnames.size() > 0)
                   sb.deleteCharAt(sb.length() - 1);
-               sb.append("); ");
+               sb.append(");");
             }
          }
       }
@@ -290,63 +287,35 @@ public class CGen {
     * @param root Where we are.
     */
    private void genFunctions(String cname, ASTNode root) {
-      boolean has;
-      ASTNode fn;
-      Pointer<LLVMTypeRef> types;
-      LLVMTypeRef fsig;
-      LLVMValueRef fbody, asgn;
-      LLVMLibrary.LLVMBuilderRef initb = ((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).initb;
-
+      StringBuilder save, tmp;
+      
       if(root.ending == false) {
          switch(root.stype) {
             case "method":
                //Start building method
-               has = root.getChildren().get(1).stype.equals("formals");
-               if(has) {
-                  ASTNode fms = root.getChildren().get(1);
-                  types = Pointer.allocateArray(LLVMTypeRef.class, fms.getChildren().size() + 1);
-                  for(int i = 1; i < fms.getChildren().size() + 1; i++) {
-                     fn = fms.getChildren().get(i - 1).getChildren().get(0);
-                     types.set(i, llvmType(fn, fn.getProp("type").toString()));
-                  }
-               } else {
-                  types = Pointer.allocateArray(LLVMTypeRef.class, 1);
-               }
-               //Add self as parameter to the function
-               types.set(0, llvmType(root, cname));
-               //Create method declaration
-               fsig = LLVMLibrary.LLVMFunctionType(llvmType(root, root.getProp("type").toString()), types,
-                       has? 1 + root.getChildren().get(1).getChildren().size() : 1, 0);
-               //Name the method as global function and register it
-               fbody = LLVMLibrary.LLVMAddFunction(m, Pointer.allocateArray(Byte.class, 6), fsig);
-               ast.scope.put(ScopeItem.LLVMVALUE, ScopeItem.METHOD + cname + root.getChildren().get(0).getValue().toString(), fbody);
-               //Register params for the build of body
-               root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + "self", LLVMLibrary.LLVMGetParam(fbody, 0));
-               if(has) {
-                  ASTNode fms = root.getChildren().get(1);
-                  for(int i = 0; i < fms.getChildren().size(); i++)
-                     root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + fms.getChildren().get(i).getChildren().get(0).getValue().toString(),
-                              LLVMLibrary.LLVMGetParam(fbody, i + 1));
-               }
-               //Add method body
-               LLVMLibrary.LLVMBasicBlockRef bb = LLVMLibrary.LLVMAppendBasicBlock(fbody, Pointer.allocateArray(Byte.class, 6));
-               LLVMLibrary.LLVMBuilderRef builder = LLVMLibrary.LLVMCreateBuilder();
-               LLVMLibrary.LLVMPositionBuilderAtEnd(builder, bb);
-               LLVMLibrary.LLVMBuildRet(builder, buildBody(cname, has? root.getChildren().get(2) : root.getChildren().get(1), builder));
+               tryAddSig(root, cname, new ArrayList<String>(), new ArrayList<CSignature>(), true);
+               sb.deleteCharAt(sb.length() - 1);
+               sb.append(" {");
+               buildBody(cname, root.getChildren().size() > 3? root.getChildren().get(3) : root.getChildren().get(2));
+               sb.append("} ");
                break;
             case "field":
-               if(root.getChildren().size() > 3) {
+               if(root.getChildren().size() > 2) {
                   //Initialized
-                  asgn = buildBody(cname, root.getChildren().get(2), initb);
+                  sb.insert(where, root.getChildren().get(0).getValue().toString() + " = ");
+                  where += (root.getChildren().get(0).getValue().toString() + " = ").length();
+                  //Save and run
+                  save = sb;
+                  tmp = sb = new StringBuilder();
+                  buildBody(cname, root.getChildren().get(2));
+                  sb = save;
+                  sb.insert(where, tmp.toString() + "; ");
+                  where += (tmp.toString() + "; ").length();
                } else {
-                  //Default initialized
-                  asgn = getDefaultForType(root, root.getChildren().get(1).getProp("type").toString(), initb);
+                  //Unitialized!
+                  sb.append(getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString()));
+                  where += getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString()).length();
                }
-               fbody = LLVMLibrary.LLVMGetParam(((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).fbody, 0);
-               LLVMLibrary.LLVMBuildStore(initb, asgn, LLVMLibrary.LLVMBuildAdd(initb, fbody, LLVMLibrary.LLVMConstInt(LLVMLibrary.LLVMInt32Type(),
-                        ((ClassRecord) root.scope.getLLVM(ScopeItem.LLVMTYPE, cname)).shift.get(root.getChildren().get(0).getValue().toString()), 0),
-                        Pointer.allocateArray(Byte.class, 6)));
-               root.scope.putAbove(ScopeItem.LLVMVALUE, ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), asgn, 1); //Register for the class
                break;
             default:
                break;
@@ -382,12 +351,6 @@ public class CGen {
    */
    private void buildBody(String cname, ASTNode root) {
       boolean has;
-      String loop;
-      LLVMTypeRef t;
-      LLVMValueRef tmp;
-      LLVMLibrary.LLVMBasicBlockRef b1, b2;
-      LLVMLibrary.LLVMBuilderRef bd1, bd2;
-      Pointer<LLVMValueRef> ptr;
       
       if(root.ending) {
          switch(root.itype) {
@@ -512,63 +475,70 @@ public class CGen {
          switch(root.stype) {
             case "call":
                has = root.getChildren().size() > 2;
-               ptr = Pointer.allocateArray(LLVMValueRef.class, has? 1 + root.getChildren().size() : 1);
-               ptr.set(0, buildBody(cname, root.getChildren().get(0), b));
+               sb.append("(" + root.getChildren().get(0).getProp("type").toString() + "_" + root.getChildren().get(1) + "(");
+               buildBody(cname, root.getChildren().get(0));
+               sb.append(", ");
                if(has) {
-                  for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++)
-                     ptr.set(i + 1, buildBody(cname, root.getChildren().get(2).getChildren().get(i), b));
+                  for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
+                     buildBody(cname, root.getChildren().get(2).getChildren().get(i));
+                     sb.append(",");
+                  }
                }
-               tmp = null;
-               loop = cname;
-               do {
-                  tmp = (LLVMValueRef) root.scope.getLLVM(ScopeItem.LLVMVALUE, ScopeItem.METHOD + loop + root.getChildren().get(1).getValue().toString());
-                  loop = ext.get(loop);
-               } while(tmp == null);
-               return LLVMLibrary.LLVMBuildCall(b, tmp, ptr, has? 1 + root.getChildren().get(2).getChildren().size() : 1, Pointer.allocateArray(Byte.class, 6));
+               sb.deleteCharAt(sb.length() - 1);
+               sb.append("))");
+               break;
             case "formal":
-               return buildBody(cname, root.getChildren().get(0), b);
+               buildBody(cname, root.getChildren().get(0));
+               break;
             case "assign":
-               return LLVMLibrary.LLVMBuildStore(b, buildBody(cname, root.getChildren().get(1), b), buildBody(cname, root.getChildren().get(0), b));
+               buildBody(cname, root.getChildren().get(0));
+               sb.append(" = ");
+               buildBody(cname, root.getChildren().get(1));
+               break;
             case "block":
                for(int i = 0; i < root.getChildren().size() - 1; i++)
-                  buildBody(cname, root.getChildren().get(i), b);
-               return buildBody(cname, root.getChildren().get(root.getChildren().size() - 1), b);
+                  buildBody(cname, root.getChildren().get(i));
+               buildBody(cname, root.getChildren().get(root.getChildren().size() - 1));
+               break;
             case "if":
-               b1 = LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6));
-               b2 = LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6));
-               bd1 = LLVMLibrary.LLVMCreateBuilder();
-               bd2 = LLVMLibrary.LLVMCreateBuilder();
-               LLVMLibrary.LLVMPositionBuilderAtEnd(bd1, b1);
-               LLVMLibrary.LLVMPositionBuilderAtEnd(bd2, b2);
-               LLVMLibrary.LLVMBuildRet(bd1, buildBody(cname, root.getChildren().get(1), bd1));
-               if(root.getChildren().size() > 2)
-                  LLVMLibrary.LLVMBuildRet(bd2, buildBody(cname, root.getChildren().get(2), bd2));
-               else
-                  LLVMLibrary.LLVMBuildRet(bd2, LLVMLibrary.LLVMBuildUnreachable(bd2));
-               return LLVMLibrary.LLVMBuildCondBr(b, buildBody(cname, root.getChildren().get(0), b), b1, b2);
+               sb.append("if(");
+               buildBody(cname, root.getChildren().get(0));
+               sb.append(") {");
+               buildBody(cname, root.getChildren().get(1));
+               sb.append("} ");
+               if(root.getChildren().size() > 2) {
+                  sb.append("else {");
+                  buildBody(cname, root.getChildren().get(2));
+                  sb.append("} ");
+               }
+               break;
             case "while":
-               b1 = LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6));
-               bd1 = LLVMLibrary.LLVMCreateBuilder();
-               LLVMLibrary.LLVMPositionBuilderAtEnd(bd1, b1);
-               buildBody(cname, root.getChildren().get(1), bd1);
-               LLVMLibrary.LLVMBuildBr(bd1, b1);
-               return LLVMLibrary.LLVMBuildCondBr(b, buildBody(cname, root.getChildren().get(0), b), b1, LLVMLibrary.LLVMInsertBasicBlock(LLVMLibrary.LLVMGetInsertBlock(b), Pointer.allocateArray(Byte.class, 6)));
+               sb.append("while(");
+               buildBody(cname, root.getChildren().get(0));
+               sb.append(") {");
+               buildBody(cname, root.getChildren().get(1));
+               sb.append("} ");
+               break;
             case "let":
                if(root.getChildren().size() > 3) {
                   //Initialized
-                  root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(), buildBody(cname, root.getChildren().get(2), b));
-                  return buildBody(cname, root.getChildren().get(3), b);
+                  sb.append(root.getChildren().get(0).getValue().toString() + " = ");
+                  buildBody(cname, root.getChildren().get(2));
+                  sb.append("; ");
                } else {
                   //Unitialized!
-                  root.scope.put(ScopeItem.LLVMVALUE, ScopeItem.FIELD + root.getChildren().get(0).getValue().toString(),
-                           getDefaultForType(root, root.getChildren().get(1).getProp("type").toString(), b));
-                  return buildBody(cname, root.getChildren().get(2), b);
+                  sb.append(getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString()));
                }
+               buildBody(cname, root.getChildren().size() > 3? root.getChildren().get(3) : root.getChildren().get(2));
+               break;
             case "uminus":
-               return LLVMLibrary.LLVMBuildNeg(b, buildBody(cname, root.getChildren().get(0), b), Pointer.allocateArray(Byte.class, 6));
+               sb.append("(-");
+               buildBody(cname, root.getChildren().get(0));
+               sb.append(")");
+               break;
             default:
                System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
-               return null;
+               break;
          }
       }
    }
