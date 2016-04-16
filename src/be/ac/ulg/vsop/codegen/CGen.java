@@ -1,8 +1,10 @@
 package be.ac.ulg.vsop.codegen;
 
-import java.io.IOException;
+import java.io.File;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,12 +21,18 @@ import be.ac.ulg.vsop.parser.SymbolValue;
 
 public class CGen {
    
+   public final static char LLVM = 'L';
+   public final static char C = 'C';
+   public final static char EXE = 'E';
+   
    private Stack<Integer> bcins; //Before current instruction when required for insterting calls.
    private Stack<String> rlabel; //End of block value accumulator 
    private ASTNode ast;
    private HashMap<String, String> ext, strs;
    StringBuilder sb;
    private Set<String> classes;
+   private HashMap<String, ArrayList<String>> lets, letstypes;
+   private HashMap<String, String> lmapping;
    
    /**
     * Build a C generator.
@@ -39,8 +47,10 @@ public class CGen {
    /**
     * Emit C to a stream.
     * @param o PrintWriter to stream.
+    * @param file Where to save.
+    * @param type Type of emission.
     */
-   public void emit(OutputStream o) {
+   public void emit(OutputStream o, String file, char type) throws Exception {
       classes = new HashSet<String>(ext.keySet());
       classes.remove("Object");
       classes.remove("String");
@@ -52,6 +62,10 @@ public class CGen {
       sb = new StringBuilder();
       bcins = new Stack<Integer>();
       rlabel = new Stack<String>();
+      lets = new HashMap<String, ArrayList<String>>();
+      letstypes = new HashMap<String, ArrayList<String>>();
+      lmapping = new HashMap<String, String>();
+      
       //Create pow function, for pow in VSOP
       sb.append("#include <stdio.h>\n#include <stdlib.h>\nint __pow(int a, int b); int __pow(int a, int b) {if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); "
                + "if(b % 2) return a * rec * rec; return rec * rec;} ");
@@ -59,8 +73,11 @@ public class CGen {
       //From a first pass, generate the structures that classes rely are
       while(classes.size() > 0)
          genStructures(ast, true, false);
-      //From a second pass, generate the methods that are functions that have a pointer *self
-      //Second pass is actually deeper in first pass
+      //From a second pass, generate the list of all declared local variable for each
+      //method, to build the "let"'s later on.
+      registerLets(ast, null, null, 0);
+      //From a third pass, generate the methods that are functions that have a pointer *self
+      //Third pass is actually deeper in first pass
       genStructures(ast, true, true);
       
       //Create global strings constants.
@@ -71,10 +88,32 @@ public class CGen {
       //Build entry point, new Main().main().
       sb.append("int main() { return Main_main(Main_init__(((Main_struct*)malloc(sizeof(Main_struct))))); }");
       
-      try {
+      if(type == CGen.C) {
          o.write(sb.toString().getBytes());
-      } catch(IOException e) {
-         System.err.println("Could not emit C code");
+      } else {
+         Path temp = null;
+         ProcessBuilder pb;
+         Process p;
+         if(type == CGen.LLVM) {
+            file = CGen.randomString();
+            temp = new File(file).toPath();
+            pb = new ProcessBuilder("clang", "-x", "c", "-o", file, "-S", "-emit-llvm", "-");
+         } else
+            pb = new ProcessBuilder("clang", "-x", "c", "-O3", "-o", file, "-");
+         pb.redirectError(new File("/dev/null"));
+         pb.redirectOutput(new File("/dev/null"));
+         p = pb.start();
+         p.getOutputStream().write(sb.toString().getBytes());
+         p.getOutputStream().flush();
+         p.getOutputStream().close();
+         p.getInputStream().close();
+         p.waitFor();
+         if(p.exitValue() == 1)
+            throw new Exception("Could not safely emit code as received 1, error");
+         if(type == CGen.LLVM) {
+            o.write(Files.readAllBytes(temp));
+            Files.delete(temp);
+         }
       }
    }
    
@@ -203,6 +242,34 @@ public class CGen {
    }
    
    /**
+    * Register the "let"'s for all the methods, so that we can prepare them.
+    * @param root AST root.
+    * @param cname Class name.
+    * @param mname Method name.
+    * @param nlets Imbrication level of "let"'s.
+    */
+   private void registerLets(ASTNode root, String cname, String mname, int nlets) {
+      String gen;
+      
+      if(root.itype == SymbolValue.CLASS) {
+         cname = root.getChildren().get(0).getValue().toString();
+      } else if(root.stype.equals("method")) {
+         mname = root.getChildren().get(0).getValue().toString();
+         lets.put(cname + "_" + mname, new ArrayList<String>());
+         letstypes.put(cname + "_" + mname, new ArrayList<String>());
+      } else if(root.stype.equals("let")) {
+         gen = "__" + CGen.randomString();
+         lmapping.put(cname + mname + nlets + ">" + root.getChildren().get(0).getValue().toString(), gen);
+         lets.get(cname + "_" + mname).add(0, gen);
+         letstypes.get(cname + "_" + mname).add(0, CGen.localType(root.getChildren().get(1).getProp("type").toString()));
+         nlets++;
+      }
+      
+      for(ASTNode a : root.getChildren())
+         registerLets(a, cname, mname, nlets);
+   }
+   
+   /**
     * Type in C.
     * @param type Type.
     * @return C type.
@@ -313,8 +380,17 @@ public class CGen {
                //Start building method
                tryAddSig(root, cname, new ArrayList<String>(), new ArrayList<CSignature>(), true, true);
                sb.deleteCharAt(sb.length() - 1);
-               sb.append(" {" + CGen.localType(root.getProp("type").toString()) + " _ret__;");
-               buildBody(cname, root.getChildren().size() > 3? root.getChildren().get(3) : root.getChildren().get(2));
+               sb.append(" {" + CGen.localType(root.getProp("type").toString()) + " _ret__; ");
+               //Now add local defined by "let"'s variables.
+               for(int i = 0; i < lets.get(cname + "_" + root.getChildren().get(0).getValue().toString()).size(); i++) {
+                  sb.append(letstypes.get(cname + "_" + root.getChildren().get(0).getValue().toString()).get(i) + " " +
+                           lets.get(cname + "_" + root.getChildren().get(0).getValue().toString()).get(i) + "; ");
+               }
+               //Now build body
+               rlabel.push("_ret__");
+               buildBody(cname, root.getChildren().get(0).getValue().toString(),
+                        root.getChildren().size() > 3? root.getChildren().get(3) : root.getChildren().get(2), 0);
+               rlabel.pop();
                sb.append("return _ret__;} ");
                break;
             case "field":
@@ -326,7 +402,7 @@ public class CGen {
                   //Save and run
                   save = sb;
                   tmp = sb = new StringBuilder();
-                  buildBody(cname, root.getChildren().get(2));
+                  buildBody(cname, null, root.getChildren().get(2), 0);
                   sb = save;
                   sb.insert(c.initb, tmp.toString() + "; ");
                   c.initb += (tmp.toString() + "; ").length();
@@ -366,91 +442,94 @@ public class CGen {
   /**
    * Add function body.
    * @param cname Class name.
+   * @param Method name.
    * @param root Current node.
+   * @param nlets Imrication level for "let"'s.
    */
-   private void buildBody(String cname, ASTNode root) {
+   private void buildBody(String cname, String mname, ASTNode root, int nlets) {
       boolean has;
       int top;
       String tmp;
       StringBuilder save, t;
+      ASTNode insert;
       
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.NOT:
                sb.append("(!");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(")");
                break;
             case SymbolValue.EQUAL:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" == ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.AND:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" & ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.LOWER_EQUAL:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" <= ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.LOWER:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" < ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.PLUS:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" + ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.MINUS:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" - ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.TIMES:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" * ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.DIV:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" / ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.POW:
                sb.append("__pow(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(", ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case SymbolValue.ISNULL:
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" == 0)");
                break;
             case SymbolValue.ASSIGN:
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                break;
             case SymbolValue.NEW:
                sb.append("(" + root.getProp("type").toString() + "_init__(malloc(sizeof(" + root.getProp("type").toString() + "_struct))))");
@@ -466,8 +545,19 @@ public class CGen {
                   sb.append("(self)");
                else if(root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString()) == null)
                   sb.append("(self->" + root.getValue().toString() + ")");
-               else
-                  sb.append("(" + root.getValue().toString() + ")");
+               else {
+                  top = nlets;
+                  do {
+                     if((tmp = lmapping.get(cname + mname + top + ">" + root.getValue().toString())) != null) {
+                        sb.append("(" + lmapping.get(cname + mname + top + ">" + root.getValue().toString()) + ")");
+                        break;
+                     }
+                     top--;
+                  } while(top > -1);
+                  if(top == -1) {
+                     sb.append("(" + root.getValue().toString() + ")");
+                  }
+               }
                break;
             case SymbolValue.FALSE:
                sb.append("(0)");
@@ -505,7 +595,7 @@ public class CGen {
                //Save and run
                save = sb;
                t = sb = new StringBuilder();
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb = save;
                sb.insert(top, t.toString() + "; ");
                top += (t.toString() + "; ").length();
@@ -514,7 +604,7 @@ public class CGen {
                sb.append("(" + tmp + "->_vtable->" + root.getChildren().get(1).getValue().toString() + "(" + tmp + ",");
                if(has) {
                   for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
-                     buildBody(cname, root.getChildren().get(2).getChildren().get(i));
+                     buildBody(cname, mname, root.getChildren().get(2).getChildren().get(i), nlets);
                      sb.append(",");
                   }
                }
@@ -523,67 +613,75 @@ public class CGen {
                break;
             case "assign":
                sb.append("(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(" = ");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append(")");
                break;
             case "block":
                //When we have a block, we create an accumulator for it. 
-               rlabel.push(CGen.randomString());
-               sb.append(CGen.localType(root.getProp("type").toString()) + " _ret__" + rlabel.peek() + "; {");
+               rlabel.push("_ret__" + CGen.randomString());
+               sb.append(CGen.localType(root.getProp("type").toString()) + " " + rlabel.peek() + "; {");
                bcins.push(sb.length());
                for(int i = 0; i < root.getChildren().size() - 1; i++) {
                   bcins.pop();
                   bcins.push(sb.length());
-                  buildBody(cname, root.getChildren().get(i));
+                  buildBody(cname, mname, root.getChildren().get(i), nlets);
                   sb.append("; ");
                }
                bcins.pop();
                bcins.push(sb.length());
                //If we reached bottom of stack, is the enclosing block of a method, and save in the global return
                tmp = rlabel.pop();
-               sb.append("_ret__" + ((rlabel.size() > 0)? tmp : "") + " = ");
-               buildBody(cname, root.getChildren().get(root.getChildren().size() - 1));
+               sb.append(rlabel.peek() + " = ");
+               buildBody(cname, mname, root.getChildren().get(root.getChildren().size() - 1), nlets);
                bcins.pop();
                sb.append(";} ");
                break;
             case "if":
-               sb.append("if(");
-               buildBody(cname, root.getChildren().get(0));
-               sb.append(") {");
-               buildBody(cname, root.getChildren().get(1));
-               sb.append("} ");
+               sb.append("((");
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
+               sb.append(")? (");
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
+               sb.append(") : (");
                if(root.getChildren().size() > 2) {
-                  sb.append("else {");
-                  buildBody(cname, root.getChildren().get(2));
-                  sb.append("} ");
+                  buildBody(cname, mname, root.getChildren().get(2), nlets);
+               } else {
+                  sb.append("0");
                }
+               sb.append("))");
                break;
             case "while":
                sb.append("while(");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(") {");
-               buildBody(cname, root.getChildren().get(1));
+               buildBody(cname, mname, root.getChildren().get(1), nlets);
                sb.append("} ");
                break;
             case "let":
-               sb.append("{ " + CGen.localType(root.getChildren().get(1).getProp("type").toString()) + " ");
+               tmp = lmapping.get(cname + mname + nlets + ">" + root.getChildren().get(0).getValue().toString());
                if(root.getChildren().size() > 3) {
                   //Initialized
-                  sb.append(root.getChildren().get(0).getValue().toString() + " = ");
-                  buildBody(cname, root.getChildren().get(2));
+                  sb.append(tmp + " = ");
+                  buildBody(cname, mname, root.getChildren().get(2), nlets);
                   sb.append("; ");
                } else {
                   //Unitialized!
-                  sb.append(getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString()));
+                  sb.append(getDefaultForType(tmp, root.getChildren().get(1).getProp("type").toString()));
                }
-               buildBody(cname, root.getChildren().size() > 3? root.getChildren().get(3) : root.getChildren().get(2));
-               sb.append("} ");
+               //Add a level of indirection to create a block down below! ;)
+               top = root.getChildren().size() > 3? 3 : 2;
+               insert = new ASTNode("block", "__dummy__");
+               insert.getChildren().add(root.getChildren().get(top));
+               insert.addProp("type", root.getChildren().get(top).getProp("type"));
+               root.getChildren().add(top, insert);
+               //Buidld the return
+               nlets++;
+               buildBody(cname, mname, root.getChildren().get(top), nlets);
                break;
             case "uminus":
                sb.append("(-");
-               buildBody(cname, root.getChildren().get(0));
+               buildBody(cname, mname, root.getChildren().get(0), nlets);
                sb.append(")");
                break;
             default:

@@ -25,6 +25,10 @@ public class Compiler {
 			System.out.println("Usage: java -jar Compiler.jar <source_file>");
 			System.exit(1);
 		}
+		if(!args[findex].endsWith(".vsop")) {
+		   System.out.println("Input file is not VSOP");
+         System.exit(1);
+		}
 		try {
 			file = new ReaderWrapper(new File(args[findex]));
 		} catch (FileNotFoundException e) {
@@ -70,7 +74,21 @@ public class Compiler {
       }
       
       CGen gen = new CGen(parser.getRoot(), a.getExt());
-      gen.emit(System.out);
+      try {
+         if(findex == 1 && args[0].equals("-llvm")) {
+            gen.emit(System.out, null, CGen.LLVM);
+            System.exit(0);
+         } else if(findex == 1 && args[0].equals("-c")) {
+            gen.emit(System.out, null, CGen.C);
+            System.exit(0);
+         }
+         gen.emit(System.out, args[findex].substring(0, args[findex].length() - 5), CGen.EXE);
+         System.out.println("Code generation completed !");
+      } catch(Exception e) {
+         e.printStackTrace();
+         System.out.println("Code emission error");
+         System.exit(1);
+      }
       System.exit(0);
 	}
 
