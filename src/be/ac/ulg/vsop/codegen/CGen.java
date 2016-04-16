@@ -67,8 +67,8 @@ public class CGen {
       lmapping = new HashMap<String, String>();
       
       //Create pow function, for pow in VSOP
-      sb.append("#include <stdio.h>\n#include <stdlib.h>\nint __pow(int a, int b); int __pow(int a, int b) {if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); "
-               + "if(b % 2) return a * rec * rec; return rec * rec;} ");
+      sb.append("#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\nint __pow(int a, int b); int __pow(int a, int b)"
+               + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       
       //From a first pass, generate the structures that classes rely are
       while(classes.size() > 0)
@@ -86,7 +86,7 @@ public class CGen {
       }
       
       //Build entry point, new Main().main().
-      sb.append("int main() { return Main_main(Main_init__(((Main_struct*)malloc(sizeof(Main_struct))))); }");
+      sb.append("int main() { GC_INIT(); return Main_main(Main_init__(((Main_struct*)GC_MALLOC(sizeof(Main_struct))))); }");
       
       if(type == CGen.C) {
          o.write(sb.toString().getBytes());
@@ -97,9 +97,9 @@ public class CGen {
          if(type == CGen.LLVM) {
             file = CGen.randomString();
             temp = new File(file).toPath();
-            pb = new ProcessBuilder("clang", "-x", "c", "-o", file, "-S", "-emit-llvm", "-");
+            pb = new ProcessBuilder("clang", "-x", "c", "-o", file, "-S", "-emit-llvm", "-I/usr/local/gc/include", "-L/usr/local/gc/lib", "-lgc", "-");
          } else
-            pb = new ProcessBuilder("clang", "-x", "c", "-O3", "-o", file, "-");
+            pb = new ProcessBuilder("clang", "-x", "c", "-O3", "-o", file, "-I/usr/local/gc/include", "-L/usr/local/gc/lib", "-lgc", "-");
          pb.redirectError(new File("/dev/null"));
          pb.redirectOutput(new File("/dev/null"));
          p = pb.start();
@@ -430,7 +430,7 @@ public class CGen {
          case "bool":
             return field + " = 0; ";
          case "String":
-            return field + " = malloc(sizeof(char)); " + field + "[0] = '\0'; "; 
+            return field + " = GC_MALLOC(sizeof(char)); " + field + "[0] = '\0'; "; 
          case "unit":
             return field + " = 0; ";
          default:
@@ -532,7 +532,7 @@ public class CGen {
                buildBody(cname, mname, root.getChildren().get(0), nlets);
                break;
             case SymbolValue.NEW:
-               sb.append("(" + root.getProp("type").toString() + "_init__(malloc(sizeof(" + root.getProp("type").toString() + "_struct))))");
+               sb.append("(" + root.getProp("type").toString() + "_init__(GC_MALLOC(sizeof(" + root.getProp("type").toString() + "_struct))))");
                break;
             case SymbolValue.INTEGER_LITERAL:
                sb.append("(" + (int)root.getValue() + ")");
