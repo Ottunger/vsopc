@@ -73,6 +73,37 @@ public class Scope {
    }
    
    /**
+    * Gets an item, but only if present before the class level.
+    * @param type Type.
+    * @param name Name.
+    * @return Item.
+    */
+   public ScopeItem getBeforeClassLevel(int type, String name) {
+      ScopeItem sci = null;
+      
+      if(p == null || p.p == null)
+         return null;
+      
+      switch(type) {
+         case ScopeItem.CLASS:
+            sci = sc.get(name);
+            break;
+         case ScopeItem.FIELD:
+            sci = sf.get(name);
+            break;
+         case ScopeItem.METHOD:
+            sci = sm.get(name);
+            break;
+         default:
+            break;
+      }
+      
+      if(sci == null)
+         return p.getBeforeClassLevel(type, name);
+      return sci;
+   }
+   
+   /**
     * Gets an item.
     * @param type Type.
     * @param name Name.

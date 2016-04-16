@@ -5,7 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 
 import be.ac.ulg.vsop.analyzer.Analyzer;
-import be.ac.ulg.vsop.codegen.LLVMGen;
+import be.ac.ulg.vsop.codegen.CGen;
 import be.ac.ulg.vsop.lexer.Lexer;
 import be.ac.ulg.vsop.lexer.ReaderWrapper;
 import be.ac.ulg.vsop.parser.Parser;
@@ -69,8 +69,8 @@ public class Compiler {
          System.exit(0);
       }
       
-      LLVMGen gen = new LLVMGen(parser.getRoot(), a.getExt());
-      gen.emit(-1);
+      CGen gen = new CGen(parser.getRoot(), a.getExt());
+      gen.emit(System.out);
       System.exit(0);
 	}
 

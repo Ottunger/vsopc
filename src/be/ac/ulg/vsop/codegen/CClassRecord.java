@@ -5,7 +5,9 @@ import java.util.ArrayList;
 
 public class CClassRecord {
    
-   public ArrayList<ArrayList<String>> fields, types;
+   public static final String DELIMITER = "__DELIMITER__";
+   
+   public ArrayList<String> fields, types;
    public ArrayList<String> meths;
    public ArrayList<CSignature> sigs;
    public int initb;
@@ -18,7 +20,7 @@ public class CClassRecord {
     * @param sigs List of method signatures.
     * @param initb Init position.
     */
-   public CClassRecord(ArrayList<ArrayList<String>> fields, ArrayList<ArrayList<String>> types, ArrayList<String> meths, ArrayList<CSignature> sigs, int initb) {
+   public CClassRecord(ArrayList<String> fields, ArrayList<String> types, ArrayList<String> meths, ArrayList<CSignature> sigs, int initb) {
       this.fields = fields;
       this.types = types;
       this.meths = meths;
