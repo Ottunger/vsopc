@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -33,6 +34,7 @@ public class CGen {
    private Set<String> classes;
    private HashMap<String, ArrayList<String>> lets, letstypes;
    private HashMap<String, String> lmapping;
+   private HashMap<String, LinkedList<String>> cmapping, ctypes;
    
    /**
     * Build a C generator.
@@ -67,6 +69,8 @@ public class CGen {
       lets = new HashMap<String, ArrayList<String>>();
       letstypes = new HashMap<String, ArrayList<String>>();
       lmapping = new HashMap<String, String>();
+      cmapping = new HashMap<String, LinkedList<String>>();
+      ctypes = new HashMap<String, LinkedList<String>>();
       
       //Create pow function, for pow in VSOP
       sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n");
@@ -86,7 +90,10 @@ public class CGen {
       //From a second pass, generate the list of all declared local variable for each
       //method, to build the "let"'s later on.
       registerLets(ast, null, null, 0);
-      //From a third pass, generate the methods that are functions that have a pointer *self
+      //From a third pass, generate the list of all intermediate variable for each
+      //call, to build the calls later on.
+      registerCalls(ast, null, null, 0);
+      //From a fourth pass, generate the methods that are functions that have a pointer *self
       //Third pass is actually deeper in first pass
       rlabel = new Stack<String>();
       genStructures(ast, true, true);
@@ -296,6 +303,30 @@ public class CGen {
    }
    
    /**
+    * Register the calls for all the methods, so that we can prepare them.
+    * @param root AST root.
+    * @param cname Class name.
+    * @param mname Method name.
+    * @param nlets Imbrication level of calls.
+    */
+   private void registerCalls(ASTNode root, String cname, String mname, int nlets) {
+      if(root.itype == SymbolValue.CLASS) {
+         cname = root.getChildren().get(0).getValue().toString();
+      } else if(root.stype.equals("method")) {
+         mname = root.getChildren().get(0).getValue().toString();
+         cmapping.put(cname + "_" + mname, new LinkedList<String>());
+         ctypes.put(cname + "_" + mname, new LinkedList<String>());
+      } else if(root.stype.equals("call")) {
+         cmapping.get(cname + "_" + mname).add("_call__" + CGen.randomString());
+         ctypes.get(cname + "_" + mname).add(CGen.localType(root.getChildren().get(0).getProp("type").toString()));
+         nlets++;
+      }
+      
+      for(ASTNode a : root.getChildren())
+         registerCalls(a, cname, mname, nlets);
+   }
+   
+   /**
     * Type in C.
     * @param type Type.
     * @return C type.
@@ -411,6 +442,11 @@ public class CGen {
                for(int i = 0; i < lets.get(cname + "_" + root.getChildren().get(0).getValue().toString()).size(); i++) {
                   sb.append(letstypes.get(cname + "_" + root.getChildren().get(0).getValue().toString()).get(i) + " " +
                            lets.get(cname + "_" + root.getChildren().get(0).getValue().toString()).get(i) + "; ");
+               }
+               //Now add local defined by calls variables.
+               for(int i = 0; i < cmapping.get(cname + "_" + root.getChildren().get(0).getValue().toString()).size(); i++) {
+                  sb.append(ctypes.get(cname + "_" + root.getChildren().get(0).getValue().toString()).get(i) + " " +
+                           cmapping.get(cname + "_" + root.getChildren().get(0).getValue().toString()).get(i) + "; ");
                }
                //Now build body
                rlabel.push("_ret__");
@@ -614,12 +650,11 @@ public class CGen {
       } else {
          switch(root.stype) {
             case "call":
-               //TODO: return value for callee is defined strangely if itself a call...
                has = root.getChildren().size() > 2;
                top = bcins.pop();
-               tmp = "__" + CGen.randomString();
-               sb.insert(top, CGen.localType(root.getChildren().get(0).getProp("type").toString()) + " " + tmp + " = ");
-               top += (CGen.localType(root.getChildren().get(0).getProp("type").toString()) + " " + tmp + " = ").length();
+               tmp = cmapping.get(cname + "_" + mname).poll();
+               sb.insert(top, tmp + " = ");
+               top += (tmp + " = ").length();
                //Save and run
                save = sb;
                t = sb = new StringBuilder();
@@ -735,7 +770,7 @@ public class CGen {
     * @return How it is called.
     */
    private String regName(String global) {
-      String urand = CGen.randomString();
+      String urand = "_char__" + CGen.randomString();
       strs.put(urand, global);
       return urand;
    }

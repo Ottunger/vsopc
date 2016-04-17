@@ -365,6 +365,8 @@ public class ASTNode {
     * @return Identifier.
     */
    public static String typeValue(ASTNode a) {
+      if(!a.stype.equals(""))
+         return a.stype;
       if(a.itype == SymbolValue.TYPE_IDENTIFIER)
          return a.value.toString();
       else
