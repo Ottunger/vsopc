@@ -24,6 +24,7 @@ class Main extends IO {
       let s : int32 <- 4 in
          let xs : List <- (new Cons).init(0, (new Cons).init(1, (new Cons).init(2, new Nil))) in
             printInt(xs.length());
+      print("Bonjour");
       0
    }
 }

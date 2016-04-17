@@ -51,6 +51,8 @@ public class CGen {
     * @param type Type of emission.
     */
    public void emit(OutputStream o, String file, char type) throws Exception {
+      int aft;
+      
       classes = new HashSet<String>(ext.keySet());
       classes.remove("Object");
       classes.remove("String");
@@ -67,7 +69,9 @@ public class CGen {
       lmapping = new HashMap<String, String>();
       
       //Create pow function, for pow in VSOP
-      sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\nint __pow(int a, int b); int __pow(int a, int b)"
+      sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n");
+      aft = sb.length();
+      sb.append("int __pow(int a, int b); int __pow(int a, int b)"
                + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
@@ -87,10 +91,9 @@ public class CGen {
       rlabel = new Stack<String>();
       genStructures(ast, true, true);
       
-      //TODO: check global strings!
       //Create global strings constants.
       for(Map.Entry<String, String> ent : strs.entrySet()) {
-         sb.insert(0, ent.getKey() + " = \"" + ent.getValue() + "\"; ");
+         sb.insert(aft, "char " + ent.getKey() + "[] = " + ent.getValue() + "; ");
       }
       
       //Build entry point, new Main().main().
@@ -200,6 +203,9 @@ public class CGen {
                   }
                   //vtable definition and one static instance
                   sb.append("struct " + type + "_vtable {");
+                  //Add IO methods if derived from it
+                  if(Analyzer.isSameOrChild(ext, type, "IO"))
+                     sb.append("IO_struct* (*print)(" + type + "_struct*, char*); IO_struct* (*printInt)(" + type + "_struct*, int);");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      sb.append(sigs.get(i).ret + " (*" + methods.get(i) + ")(");
@@ -210,12 +216,12 @@ public class CGen {
                         sb.deleteCharAt(sb.length() - 1);
                      sb.append("); ");
                   }
-                  //Add IO methods if derived from it
-                  if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_struct* (*print)(" + type + "_struct*, char*); IO_struct* (*printInt)(" + type + "_struct*, int);");
                   sb.append("}; ");
                   //Create the static instance
                   sb.append(type + "_vtable " + type + "_static_vtable = {");
+                  //Add IO methods if derived from it
+                  if(Analyzer.isSameOrChild(ext, type, "IO"))
+                     sb.append("IO_print, IO_printInt,");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      do {
@@ -228,9 +234,6 @@ public class CGen {
                      type = root.getChildren().get(0).getValue().toString();
                      sb.append(upper + "_" + methods.get(i) + ",");
                   }
-                  //Add IO methods if derived from it
-                  if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_print, IO_printInt,");
                   if(methods.size() > 0 || Analyzer.isSameOrChild(ext, type, "IO"))
                      sb.deleteCharAt(sb.length() - 1);
                   sb.append("}; ");
