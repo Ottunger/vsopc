@@ -17,6 +17,8 @@ public class Analyzer {
     * Creates an analyzer.
     */
    public Analyzer() {
+      ASTNode fms, tmp;
+      
       ext = new HashMap<String, String>();
       prim = new HashMap<String, HashMap<String, ScopeItem>>();
       ext.put("Object", Analyzer.EMPTY);
@@ -24,6 +26,7 @@ public class Analyzer {
       ext.put("int32", Analyzer.EMPTY);
       ext.put("bool", Analyzer.EMPTY);
       ext.put("unit", Analyzer.EMPTY);
+      ext.put("IO", "Object");
       //There is one entry in $prim per recorded class, and it only registers their methods.
       //This table is only used at first to ensure basic knowledge of everything.
       prim.put("Object", new HashMap<String, ScopeItem>());
@@ -31,6 +34,24 @@ public class Analyzer {
       prim.put("int32", new HashMap<String, ScopeItem>());
       prim.put("bool", new HashMap<String, ScopeItem>());
       prim.put("unit", new HashMap<String, ScopeItem>());
+      prim.put("IO", new HashMap<String, ScopeItem>());
+      //Rgister the methods of the well known IO class
+      //Method print
+      fms = new ASTNode("formals", "__dummy__");
+      tmp = new ASTNode("formal", "__dummy__");
+      tmp.addProp("type", "String");
+      fms.getChildren().add(0, tmp);
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "IO");
+      prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3));
+      //Method printInt
+      fms = new ASTNode("formals", "__dummy__");
+      tmp = new ASTNode("formal", "__dummy__");
+      tmp.addProp("type", "int32");
+      fms.getChildren().add(0, tmp);
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "IO");
+      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3));
    }
    
    /**
@@ -53,6 +74,7 @@ public class Analyzer {
       root.scope.put(ScopeItem.CLASS, "int32", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "int32"), 0));
       root.scope.put(ScopeItem.CLASS, "bool", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "bool"), 0));
       root.scope.put(ScopeItem.CLASS, "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
+      root.scope.put(ScopeItem.CLASS, "IO", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "IO"), 0));
       //Register all classes top domain
       regClasses(root, true);
       //Register scopes
@@ -96,11 +118,12 @@ public class Analyzer {
    
    /**
     * Check whether a type is the same or the extension of another.
+    * @param ext Extension map.
     * @param a First type that could be child.
     * @param b Second type.
     * @return True if condition is met.
     */
-   private boolean isSameOrChild(String a, String b) {
+   public static boolean isSameOrChild(HashMap<String, String> ext, String a, String b) {
       if(a.equals(b))
          return true;
       while(!((a = ext.get(a)).equals(Analyzer.EMPTY))) {
@@ -189,11 +212,11 @@ public class Analyzer {
                   if(s == null || s.type != ScopeItem.CLASS)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call a method on type " + getNodeType(root, 0, true));
                   //Check that this method is registered
-                  if((t = s.userType.scope.get(ScopeItem.METHOD, root.getChildren().get(1).getValue().toString())) != null)
+                  if((t = prim.get(type).get(root.getChildren().get(1).getValue().toString())) != null)
                      break;
                } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
                //Check that this method is registered
-               if((t = s.userType.scope.get(ScopeItem.METHOD, root.getChildren().get(1).getValue().toString())) == null)
+               if(type.equals(Analyzer.EMPTY))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call method " +
                            root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, 0, true));
                //Then our type is the one of the method
@@ -205,7 +228,7 @@ public class Analyzer {
                   for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
                      String arg = getNodeType(root.getChildren().get(2), i, true);
                      String formal = getNodeType(t.formals, i, true);
-                     if(!isSameOrChild(arg, formal))
+                     if(!Analyzer.isSameOrChild(ext, arg, formal))
                         throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
                                  ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
                   }
@@ -232,7 +255,7 @@ public class Analyzer {
                if(root.getChildren().get(0).getValue().toString().equals("self"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
                //Check that assign a same typed-value or a parent-typed value
-               if(!isSameOrChild(getNodeType(root, 1, true), getNodeType(root, 0, true)))
+               if(!Analyzer.isSameOrChild(ext, getNodeType(root, 1, true), getNodeType(root, 0, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, 1, true) + " to " + getNodeType(root, 0, true));
                break;
@@ -242,7 +265,7 @@ public class Analyzer {
                //Currently, when a while is issued as last expression
                if(getNodeType(root, root.getChildren().size() - 1, true).equals(Analyzer.EMPTY))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method cannot return anything as is");
-               if(!isSameOrChild(getNodeType(root, root.getChildren().size() - 1, true), getNodeType(root, -1, false)))
+               if(!Analyzer.isSameOrChild(ext, getNodeType(root, root.getChildren().size() - 1, true), getNodeType(root, -1, false)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method type is " + 
                            getNodeType(root, -1, false) + " but got " + getNodeType(root, root.getChildren().size() - 1, true));
             case "block":
@@ -256,9 +279,9 @@ public class Analyzer {
                   if(getNodeType(root, 1, true).equals("unit") || getNodeType(root, 2, true).equals("unit"))
                      root.addProp("type", "unit");
                   else {
-                     if(isSameOrChild(getNodeType(root, 1, true), getNodeType(root, 2, true)))
+                     if(Analyzer.isSameOrChild(ext, getNodeType(root, 1, true), getNodeType(root, 2, true)))
                         root.addProp("type", getNodeType(root, 2, true));
-                     else if(isSameOrChild(getNodeType(root, 2, true), getNodeType(root, 1, true)))
+                     else if(Analyzer.isSameOrChild(ext, getNodeType(root, 2, true), getNodeType(root, 1, true)))
                         root.addProp("type", getNodeType(root, 1, true));
                      else
                         throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error if branches are typed as " + 
@@ -275,7 +298,7 @@ public class Analyzer {
                if(ext.get(getNodeType(root, 1, false)) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, 1, false));
                //Check in the assign part of the "let"
-               if(root.getChildren().size() > 3 && !isSameOrChild(getNodeType(root, 2, true), getNodeType(root, 1, false)))
+               if(root.getChildren().size() > 3 && !Analyzer.isSameOrChild(ext, getNodeType(root, 2, true), getNodeType(root, 1, false)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, 2, true) + " to " + getNodeType(root, 1, false));
                root.addProp("type", getNodeType(root, root.getChildren().size() - 1, true));
@@ -314,7 +337,7 @@ public class Analyzer {
                //Put "self" everywhere in this class
                root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1));
                //Check for extends-loop
-               if(isSameOrChild(root.getChildren().get(1).getValue().toString(), root.getChildren().get(0).getValue().toString()))
+               if(Analyzer.isSameOrChild(ext, root.getChildren().get(1).getValue().toString(), root.getChildren().get(0).getValue().toString()))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " defines an extends-loop");
                break;
             case SymbolValue.OBJECT_IDENTIFIER:
@@ -456,6 +479,7 @@ public class Analyzer {
     * @param n Name of the class were defined.
     */
    private boolean differentMethodAbove(ASTNode root, String m, String n) throws Exception {
+      boolean has;
       ScopeItem t;
       
       while(!n.equals(Analyzer.EMPTY)) {
@@ -466,14 +490,17 @@ public class Analyzer {
          //Check that method exists in this upper class
          t = prim.get(n).get(m);
          if(t != null) {
-            //Check same formals at both ends, otherwise bad override
-            if(((root.getChildren().size() == 3) != (t.formals == null)) || (root.getChildren().size() > 3 && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
+            has = root.getChildren().size() > 3;
+            //Check same return & same formals at both ends, otherwise bad override
+            if(!getNodeType(root, has? 2 : 1, true).equals(getNodeType(t.userType, -1, true)))
+               return false;
+            if(((root.getChildren().size() == 3) != (t.formals == null)) || (has && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
                return true;
-            } else if(root.getChildren().size() > 3) {
+            } else if(has) {
                for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
                   String arg = getNodeType(root.getChildren().get(2), i, true);
                   String formal = getNodeType(t.formals, i, true);
-                  if(!isSameOrChild(arg, formal))
+                  if(!Analyzer.isSameOrChild(ext, arg, formal))
                      return true;
                }
             }

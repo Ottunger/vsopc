@@ -14,7 +14,6 @@ install-tools:
 	tar -xf gc-7.2f.tar.gz
 	cd gc-7.2; ./configure --prefix=/usr/local/gc --disable-threads; make; sudo make install
 	rm -rf gc-*
-	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/gc/lib; echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/gc/lib" >> ~/.bashrc
 	
 vsopc:
 	find -name "*.java" > sources

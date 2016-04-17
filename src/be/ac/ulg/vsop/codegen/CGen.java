@@ -57,6 +57,7 @@ public class CGen {
       classes.remove("int32");
       classes.remove("bool");
       classes.remove("unit");
+      classes.remove("IO");
       
       strs = new HashMap<String, String>();
       sb = new StringBuilder();
@@ -69,6 +70,12 @@ public class CGen {
       //Create pow function, for pow in VSOP
       sb.append("#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\nint __pow(int a, int b); int __pow(int a, int b)"
                + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
+      //And here comes logging for free
+      sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
+               + "IO_struct* IO_printInt(IO_struct*, int); struct IO_vtable {IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int);"
+               + "}; IO_vtable IO_static_vtable = {IO_print, IO_printInt}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;"
+               + "} IO_struct* IO_print(IO_struct* self, char* str) {puts(str); return self;} IO_struct* IO_printInt(IO_struct* self, int num) {"
+               + "printf(\"%d\\n\", num); return self;}");
       
       //From a first pass, generate the structures that classes rely are
       while(classes.size() > 0)
@@ -97,9 +104,9 @@ public class CGen {
          if(type == CGen.LLVM) {
             file = CGen.randomString();
             temp = new File(file).toPath();
-            pb = new ProcessBuilder("clang", "-x", "c", "-o", file, "-S", "-emit-llvm", "-I/usr/local/gc/include", "-L/usr/local/gc/lib", "-lgc", "-");
+            pb = new ProcessBuilder("clang", "-x", "c", "-o", file, "-S", "-emit-llvm", "-I/usr/local/gc/include", "-");
          } else
-            pb = new ProcessBuilder("clang", "-x", "c", "-O3", "-o", file, "-I/usr/local/gc/include", "-L/usr/local/gc/lib", "-lgc", "-");
+            pb = new ProcessBuilder("clang", "-x", "c", "-O3", "-o", file, "-I/usr/local/gc/include", "-static", "-", "-L/usr/local/gc/lib", "-lgc");
          pb.redirectError(new File("/dev/null"));
          pb.redirectOutput(new File("/dev/null"));
          p = pb.start();
@@ -193,6 +200,9 @@ public class CGen {
                         sb.deleteCharAt(sb.length() - 1);
                      sb.append("); ");
                   }
+                  //Add IO methods if derived from it
+                  if(Analyzer.isSameOrChild(ext, type, "IO"))
+                     sb.append("IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int);");
                   sb.append("}; ");
                   //Create the static instance
                   sb.append(type + "_vtable " + type + "_static_vtable = {");
@@ -208,7 +218,10 @@ public class CGen {
                      type = root.getChildren().get(0).getValue().toString();
                      sb.append(upper + "_" + methods.get(i) + ",");
                   }
-                  if(methods.size() > 0)
+                  //Add IO methods if derived from it
+                  if(Analyzer.isSameOrChild(ext, type, "IO"))
+                     sb.append("IO_print, IO_printInt,");
+                  if(methods.size() > 0 || Analyzer.isSameOrChild(ext, type, "IO"))
                      sb.deleteCharAt(sb.length() - 1);
                   sb.append("}; ");
                   
@@ -445,6 +458,7 @@ public class CGen {
    * @param Method name.
    * @param root Current node.
    * @param nlets Imrication level for "let"'s.
+   * @return Created return variable name if any is created for above block.
    */
    private void buildBody(String cname, String mname, ASTNode root, int nlets) {
       boolean has;
@@ -587,15 +601,17 @@ public class CGen {
       } else {
          switch(root.stype) {
             case "call":
-               top = bcins.pop();
                has = root.getChildren().size() > 2;
+               top = bcins.pop();
                tmp = "__" + CGen.randomString();
                sb.insert(top, CGen.localType(root.getChildren().get(0).getProp("type").toString()) + " " + tmp + " = ");
                top += (CGen.localType(root.getChildren().get(0).getProp("type").toString()) + " " + tmp + " = ").length();
                //Save and run
                save = sb;
                t = sb = new StringBuilder();
+               bcins.push(0);
                buildBody(cname, mname, root.getChildren().get(0), nlets);
+               bcins.pop();
                sb = save;
                sb.insert(top, t.toString() + "; ");
                top += (t.toString() + "; ").length();
@@ -637,7 +653,7 @@ public class CGen {
                buildBody(cname, mname, root.getChildren().get(root.getChildren().size() - 1), nlets);
                bcins.pop();
                sb.append(";} ");
-               break;
+               break; 
             case "if":
                sb.append("((");
                buildBody(cname, mname, root.getChildren().get(0), nlets);
@@ -675,7 +691,7 @@ public class CGen {
                insert.getChildren().add(root.getChildren().get(top));
                insert.addProp("type", root.getChildren().get(top).getProp("type"));
                root.getChildren().add(top, insert);
-               //Buidld the return
+               //Build the return
                nlets++;
                buildBody(cname, mname, root.getChildren().get(top), nlets);
                break;
