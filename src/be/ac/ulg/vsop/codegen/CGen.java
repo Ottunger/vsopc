@@ -62,13 +62,12 @@ public class CGen {
       strs = new HashMap<String, String>();
       sb = new StringBuilder();
       bcins = new Stack<Integer>();
-      rlabel = new Stack<String>();
       lets = new HashMap<String, ArrayList<String>>();
       letstypes = new HashMap<String, ArrayList<String>>();
       lmapping = new HashMap<String, String>();
       
       //Create pow function, for pow in VSOP
-      sb.append("#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\nint __pow(int a, int b); int __pow(int a, int b)"
+      sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\nint __pow(int a, int b); int __pow(int a, int b)"
                + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
@@ -85,8 +84,10 @@ public class CGen {
       registerLets(ast, null, null, 0);
       //From a third pass, generate the methods that are functions that have a pointer *self
       //Third pass is actually deeper in first pass
+      rlabel = new Stack<String>();
       genStructures(ast, true, true);
       
+      //TODO: check global strings!
       //Create global strings constants.
       for(Map.Entry<String, String> ent : strs.entrySet()) {
          sb.insert(0, ent.getKey() + " = \"" + ent.getValue() + "\"; ");
@@ -136,6 +137,7 @@ public class CGen {
       ArrayList<String> fields, types;
       ArrayList<String> methods;
       ArrayList<CSignature> sigs;
+      Stack<ASTNode> msee;
       
       if(!second && root.ending) {
          switch(root.itype) {
@@ -175,19 +177,27 @@ public class CGen {
                   //Prepare vtable definition
                   methods = new ArrayList<String>();
                   sigs = new ArrayList<CSignature>();
+                  msee = new Stack<ASTNode>();
+                  rlabel = new Stack<String>();
                   do {
                      vclass = ast.scope.get(ScopeItem.CLASS, type).userType;
                      if(vclass.getChildren().size() > 2) {
                         for(ASTNode a : vclass.getChildren()) {
-                           if(type.equals(root.getChildren().get(0).getValue().toString())) {
-                              tryAddSig(a, root.getChildren().get(0).getValue().toString(), methods, sigs, true, false);
-                           } else {
-                              tryAddSig(a, root.getChildren().get(0).getValue().toString(), methods, sigs, false, false);
-                           }
+                           msee.push(a);
+                           rlabel.push(type);
                         }
                      }
                   } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
                   type = root.getChildren().get(0).getValue().toString();
+                  while(!msee.isEmpty()) {
+                     ASTNode a = msee.pop();
+                     String from = rlabel.pop();
+                     if(type.equals(from)) {
+                        tryAddSig(a, type, methods, sigs, true, false);
+                     } else {
+                        tryAddSig(a, type, methods, sigs, false, false);
+                     }
+                  }
                   //vtable definition and one static instance
                   sb.append("struct " + type + "_vtable {");
                   //Write the fields into the C code
@@ -202,7 +212,7 @@ public class CGen {
                   }
                   //Add IO methods if derived from it
                   if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int);");
+                     sb.append("IO_struct* (*print)(" + type + "_struct*, char*); IO_struct* (*printInt)(" + type + "_struct*, int);");
                   sb.append("}; ");
                   //Create the static instance
                   sb.append(type + "_vtable " + type + "_static_vtable = {");
@@ -333,21 +343,21 @@ public class CGen {
                }
             }
             sigs.add(sig);
+         }
             
-            //Print out the signature if needed
-            if(write) {
-               i = sigs.size() - 1;
-               sb.append(sigs.get(i).ret + " " + cname + "_" + methods.get(i) + "(");
-               for(int j = 0; j < sigs.get(i).pnames.size(); j++) {
-                  sb.append(sigs.get(i).ptypes.get(j));
-                  if(names)
-                     sb.append(" " + sigs.get(i).pnames.get(j));
-                  sb.append(",");
-               }
-               if(sigs.get(i).pnames.size() > 0)
-                  sb.deleteCharAt(sb.length() - 1);
-               sb.append(");");
+         //Print out the signature if needed
+         if(write) {
+            i = methods.indexOf(mname);
+            sb.append(sigs.get(i).ret + " " + cname + "_" + methods.get(i) + "(");
+            for(int j = 0; j < sigs.get(i).pnames.size(); j++) {
+               sb.append(sigs.get(i).ptypes.get(j));
+               if(names)
+                  sb.append(" " + sigs.get(i).pnames.get(j));
+               sb.append(",");
             }
+            if(sigs.get(i).pnames.size() > 0)
+               sb.deleteCharAt(sb.length() - 1);
+            sb.append(");");
          }
       }
    }
@@ -601,6 +611,7 @@ public class CGen {
       } else {
          switch(root.stype) {
             case "call":
+               //TODO: return value for callee is defined strangely if itself a call...
                has = root.getChildren().size() > 2;
                top = bcins.pop();
                tmp = "__" + CGen.randomString();
