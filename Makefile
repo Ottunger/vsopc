@@ -18,8 +18,8 @@ install-tools:
 vsopc:
 	find -name "*.java" > sources
 	echo "Main-Class: be.ac.ulg.vsop.Compiler" >> manifest
-	javac -classpath ./build -d ./build @sources
-	cd build; jar cvfm ../vsopcompiler.jar ../manifest ./*
+	javac -classpath ./build -d ./build @sources > /dev/null
+	cd build; jar cvfm ../vsopcompiler.jar ../manifest ./* > /dev/null
 	echo "#! /bin/sh" > vsopc
 	echo "DIR=\$$(dirname "\$$0")" >> vsopc
 	echo "java -jar \"\$$DIR/vsopcompiler.jar\" \"\$$@\" " >> vsopc

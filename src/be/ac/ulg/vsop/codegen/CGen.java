@@ -33,8 +33,9 @@ public class CGen {
    StringBuilder sb;
    private Set<String> classes;
    private HashMap<String, ArrayList<String>> lets, letstypes;
-   private HashMap<String, String> lmapping;
-   private HashMap<String, LinkedList<String>> cmapping, ctypes;
+   private HashMap<String, String> lmapping; //Used for "let"'s definitions of temp variables
+   private HashMap<String, LinkedList<String>> cmapping, ctypes; //Used for "call"'s definitions of temp variables
+   private ArrayList<String> cdef; //All defined classes, in their order of definition
    
    /**
     * Build a C generator.
@@ -71,6 +72,7 @@ public class CGen {
       lmapping = new HashMap<String, String>();
       cmapping = new HashMap<String, LinkedList<String>>();
       ctypes = new HashMap<String, LinkedList<String>>();
+      cdef = new ArrayList<String>();
       
       //Create pow function, for pow in VSOP
       sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n");
@@ -256,6 +258,9 @@ public class CGen {
                   //Register class then close so far the init, after having saved where to insert.
                   ast.scope.put(ScopeItem.CTYPE, type, new CClassRecord(fields, types, methods, sigs, sb.length()));
                   sb.append("return self; } ");
+                  
+                  //And we have defined ourself :)
+                  cdef.add(type);
                }
                break;
             default:
@@ -428,6 +433,7 @@ public class CGen {
     * @param root Where we are.
     */
    private void genFunctions(String cname, ASTNode root) {
+      int shift, j;
       StringBuilder save, tmp;
       CClassRecord c;
       
@@ -460,19 +466,26 @@ public class CGen {
                if(root.getChildren().size() > 2) {
                   //Initialized
                   sb.insert(c.initb, "self->" + root.getChildren().get(0).getValue().toString() + " = ");
-                  c.initb += ("self->" + root.getChildren().get(0).getValue().toString() + " = ").length();
+                  shift = ("self->" + root.getChildren().get(0).getValue().toString() + " = ").length();
+                  c.initb += shift;
                   //Save and run
                   save = sb;
                   tmp = sb = new StringBuilder();
                   buildBody(cname, null, root.getChildren().get(2), 0);
                   sb = save;
                   sb.insert(c.initb, tmp.toString() + "; ");
+                  shift += (tmp.toString() + "; ").length();
                   c.initb += (tmp.toString() + "; ").length();
                } else {
                   //Unitialized!
                   sb.insert(c.initb, "self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString()));
-                  c.initb += ("self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString())).length();
+                  shift = ("self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString())).length();
+                  c.initb += shift;
                }
+               //All classes defined after us mus shift were to insert
+               j = cdef.indexOf(cname);
+               for(int i = j + 1; i < cdef.size(); i++)
+                  ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).initb += shift;
                break;
             default:
                break;
@@ -650,6 +663,7 @@ public class CGen {
       } else {
          switch(root.stype) {
             case "call":
+               //TODO: make sure values are stacked in right order
                has = root.getChildren().size() > 2;
                top = bcins.pop();
                tmp = cmapping.get(cname + "_" + mname).poll();
