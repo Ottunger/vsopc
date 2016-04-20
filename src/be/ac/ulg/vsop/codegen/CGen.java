@@ -90,7 +90,7 @@ public class CGen {
       registerLets(ast, null, null, 0);
       //From a third pass, generate the list of all intermediate variable for each
       //instruction, to build them later on.
-      registerInsts(ast, null, null);
+      registerInsts(null, ast, null, null);
       //From a fourth pass, generate the methods that are functions that have a pointer *self
       //Third pass is actually deeper in first pass
       genStructures(ast, true, true);
@@ -313,16 +313,21 @@ public class CGen {
    
    /**
     * Register the return values of instructions.
+    * @param parent Parent of current node.
     * @param root AST root.
     * @param cname Class name.
     * @param mname Method name.
     * @param nlets Imbrication level of calls.
     */
-   private void registerInsts(ASTNode root, String cname, String mname) {
+   private void registerInsts(ASTNode parent, ASTNode root, String cname, String mname) {
+      ScopeItem si;
+      
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.CLASS:
                cname = root.getChildren().get(0).getValue().toString();
+               imapping.put(cname + "_" + null, new HashMap<ASTNode, String>());
+               itypes.put(cname + "_" + null, new HashMap<ASTNode, String>());
                break;
             case SymbolValue.NOT:
             case SymbolValue.EQUAL:
@@ -336,14 +341,24 @@ public class CGen {
             case SymbolValue.POW:
             case SymbolValue.ISNULL:
             case SymbolValue.NEW:
+            case SymbolValue.ASSIGN:
             case SymbolValue.INTEGER_LITERAL:
             case SymbolValue.STRING_LITERAL:
-            case SymbolValue.OBJECT_IDENTIFIER:
             case SymbolValue.FALSE:
             case SymbolValue.TRUE:
             case SymbolValue.UNIT_VALUE:
-               imapping.get(cname + "_" + mname).put(root, CGen.randomString());
-               itypes.get(cname + "_" + mname).put(root, root.getProp("type").toString());
+               imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
+               itypes.get(cname + "_" + mname).put(root, CGen.localType(root.getProp("type").toString()));
+               break;
+            case SymbolValue.OBJECT_IDENTIFIER:
+               //Skip if we are the name of a method, or the name of the method in a call
+               if(!parent.stype.equals("method") && !(parent.stype.equals("call") && parent.getChildren().get(1) == root)) {
+                  si = parent.scope.get(ScopeItem.FIELD, root.getValue().toString());
+                  if(si == null)
+                     si = Analyzer.findFieldAbove(ext, root, cname);
+                  imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
+                  itypes.get(cname + "_" + mname).put(root, CGen.localType(si.userType.getProp("type").toString()));
+               }
                break;
             default:
                break;
@@ -361,8 +376,8 @@ public class CGen {
             case "if":
             case "let":
             case "uminus":
-               imapping.get(cname + "_" + mname).put(root, CGen.randomString());
-               itypes.get(cname + "_" + mname).put(root, root.getProp("type").toString());
+               imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
+               itypes.get(cname + "_" + mname).put(root, CGen.localType(root.getProp("type").toString()));
                break;
             default:
                break;
@@ -370,7 +385,7 @@ public class CGen {
       }
       
       for(ASTNode a : root.getChildren())
-         registerInsts(a, cname, mname);
+         registerInsts(root, a, cname, mname);
    }
    
    /**
@@ -497,7 +512,7 @@ public class CGen {
                   sb.append(itypes.get(cname + "_" + mname).get(iname.getKey()) + " " + iname.getValue() + "; ");
                }
                //Now build body
-               buildBody(cname, mname, root.getChildren().get(root.getChildren().size() > 3? 3 : 2), 0);
+               buildBody(root, cname, mname, root.getChildren().get(root.getChildren().size() > 3? 3 : 2), 0);
                sb.append("return " + imapping.get(cname + "_" + mname).get(root.getChildren().get(root.getChildren().size() > 3? 3 : 2)) + ";} ");
                break;
             case "field":
@@ -510,7 +525,7 @@ public class CGen {
                   //Save and run
                   save = sb;
                   tmp = sb = new StringBuilder();
-                  buildBody(cname, null, root.getChildren().get(2), 0);
+                  buildBody(root, cname, null, root.getChildren().get(2), 0);
                   sb = save;
                   sb.insert(c.initb, tmp.toString() + "; ");
                   shift += (tmp.toString() + "; ").length();
@@ -555,24 +570,25 @@ public class CGen {
 
   /**
    * Add function body.
+   * @param parent Parent node.
    * @param cname Class name.
    * @param Method name.
    * @param root Current node.
    * @param nlets Imrication level for "let"'s.
    * @return Created return variable name if any is created for above block.
    */
-   private void buildBody(String cname, String mname, ASTNode root, int nlets) {
+   private void buildBody(ASTNode parent, String cname, String mname, ASTNode root, int nlets) {
       boolean has;
       int top;
       String tmp;
       
       if(root.stype.equals("let")) {
          for(ASTNode a : root.getChildren()) {
-            buildBody(cname, mname, a, nlets + 1);
+            buildBody(root, cname, mname, a, nlets + 1);
          }
       } else {
          for(ASTNode a : root.getChildren()) {
-            buildBody(cname, mname, a, nlets);
+            buildBody(root, cname, mname, a, nlets);
          }
       }
       
@@ -622,6 +638,9 @@ public class CGen {
             case SymbolValue.NEW:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getProp("type").toString() + "_init__(GC_MALLOC(sizeof(" + root.getProp("type").toString() + "_struct)));");
                break;
+            case SymbolValue.ASSIGN:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
+               break;
             case SymbolValue.INTEGER_LITERAL:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + (int)root.getValue() + ";");
                break;
@@ -629,6 +648,9 @@ public class CGen {
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + regName(root.getValue().toString()) + ";");
                break;
             case SymbolValue.OBJECT_IDENTIFIER:
+               //Skip if we are the name of a method, or the name of the method in a call
+               if(parent.stype.equals("method") || (parent.stype.equals("call") && parent.getChildren().get(1) == root))
+                  break;
                if(root.getValue().toString().equals("self"))
                   sb.append(imapping.get(cname + "_" + mname).get(root) + " = self;");
                else if(root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString()) == null)
@@ -655,6 +677,13 @@ public class CGen {
                break;
             case SymbolValue.UNIT_VALUE:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
+               break;
+            case SymbolValue.INT32:
+            case SymbolValue.STRING:
+            case SymbolValue.BOOL:
+            case SymbolValue.UNIT:
+            case SymbolValue.TYPE_IDENTIFIER:
+               //Just to not get an error
                break;
             default:
                System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
@@ -704,6 +733,10 @@ public class CGen {
                break;
             case "uminus":
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = -(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ");");
+               break;
+            case "formal":
+            case "args":
+               //Just to not gen an error
                break;
             default:
                System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
