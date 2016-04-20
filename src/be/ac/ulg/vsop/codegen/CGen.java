@@ -500,7 +500,7 @@ public class CGen {
                   shift = ("self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString())).length();
                   c.initb += shift;
                }
-               //All classes defined after us mus shift were to insert
+               //All classes defined after us must shift were to insert
                j = cdef.indexOf(cname);
                for(int i = j + 1; i < cdef.size(); i++)
                   ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).initb += shift;

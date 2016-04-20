@@ -26,7 +26,7 @@ class Main extends IO {
    main() : int32 {
       let s : int32 <- 4 in
          let xs : Cons <- (new Cons).init(0, (new Cons).init(1, (new Cons).init(2, new Nil))) in
-            printInt(2).print("Hi").printInt(xs.next().head());
+            printInt(2);
       print("Bonjour");
       0
    }
