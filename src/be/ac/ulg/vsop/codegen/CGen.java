@@ -290,7 +290,9 @@ public class CGen {
     * @param nlets Imbrication level of "let"'s.
     */
    private void registerLets(ASTNode root, String cname, String mname, int nlets) {
+      int top;
       String gen;
+      ASTNode insert;
       
       if(root.itype == SymbolValue.CLASS) {
          cname = root.getChildren().get(0).getValue().toString();
@@ -304,6 +306,12 @@ public class CGen {
          lets.get(cname + "_" + mname).add(0, gen);
          letstypes.get(cname + "_" + mname).add(0, CGen.localType(root.getChildren().get(1).getProp("type").toString()));
          nlets++;
+         //Add a level of indirection to create a block down below! ;)
+         top = root.getChildren().size() > 3? 3 : 2;
+         insert = new ASTNode("block", "__dummy__");
+         insert.getChildren().add(root.getChildren().get(top));
+         insert.addProp("type", root.getChildren().get(top).getProp("type"));
+         root.getChildren().add(top, insert);
       }
       
       for(ASTNode a : root.getChildren())
@@ -537,7 +545,6 @@ public class CGen {
       int top;
       String tmp;
       StringBuilder save, t;
-      ASTNode insert;
       
       if(root.ending) {
          switch(root.itype) {
@@ -758,12 +765,7 @@ public class CGen {
                   //Unitialized!
                   sb.append(getDefaultForType(tmp, root.getChildren().get(1).getProp("type").toString()));
                }
-               //Add a level of indirection to create a block down below! ;)
                top = root.getChildren().size() > 3? 3 : 2;
-               insert = new ASTNode("block", "__dummy__");
-               insert.getChildren().add(root.getChildren().get(top));
-               insert.addProp("type", root.getChildren().get(top).getProp("type"));
-               root.getChildren().add(top, insert);
                //Build the return
                nlets++;
                buildBody(cname, mname, root.getChildren().get(top), nlets);
