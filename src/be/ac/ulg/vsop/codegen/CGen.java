@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -26,16 +25,13 @@ public class CGen {
    public final static char C = 'C';
    public final static char EXE = 'E';
    
-   private Stack<Integer> bcins; //Before current instruction when required for insterting calls.
-   private Stack<String> rlabel; //End of block value accumulator 
    private ASTNode ast;
    private HashMap<String, String> ext, strs;
    StringBuilder sb;
    private Set<String> classes;
    private HashMap<String, ArrayList<String>> lets, letstypes;
    private HashMap<String, String> lmapping; //Used for "let"'s definitions of temp variables
-   private HashMap<String, LinkedList<String>> cmapping, ctypes; //Used for "call"'s definitions of temp variables
-   private HashMap<String, LinkedList<String>> bmapping, btypes; //Used for "blocks"'s definitions of temp variables
+   private HashMap<String, HashMap<ASTNode, String>> imapping, itypes; //Used for all instructions returns
    private ArrayList<String> cdef; //All defined classes, in their order of definition
    
    /**
@@ -67,14 +63,11 @@ public class CGen {
       
       strs = new HashMap<String, String>();
       sb = new StringBuilder();
-      bcins = new Stack<Integer>();
       lets = new HashMap<String, ArrayList<String>>();
       letstypes = new HashMap<String, ArrayList<String>>();
       lmapping = new HashMap<String, String>();
-      cmapping = new HashMap<String, LinkedList<String>>();
-      ctypes = new HashMap<String, LinkedList<String>>();
-      bmapping = new HashMap<String, LinkedList<String>>();
-      btypes = new HashMap<String, LinkedList<String>>();
+      imapping = new HashMap<String, HashMap<ASTNode, String>>();
+      itypes = new HashMap<String, HashMap<ASTNode, String>>();
       cdef = new ArrayList<String>();
       
       //Create pow function, for pow in VSOP
@@ -96,11 +89,10 @@ public class CGen {
       //method, to build the "let"'s later on.
       registerLets(ast, null, null, 0);
       //From a third pass, generate the list of all intermediate variable for each
-      //call and block, to build the calls and blocks later on.
-      registerCalls(ast, null, null);
+      //instruction, to build them later on.
+      registerInsts(ast, null, null);
       //From a fourth pass, generate the methods that are functions that have a pointer *self
       //Third pass is actually deeper in first pass
-      rlabel = new Stack<String>();
       genStructures(ast, true, true);
       
       //Create global strings constants.
@@ -153,6 +145,7 @@ public class CGen {
       ArrayList<String> methods;
       ArrayList<CSignature> sigs;
       Stack<ASTNode> msee;
+      Stack<String> rlabel;
       
       if(!second && root.ending) {
          switch(root.itype) {
@@ -319,31 +312,65 @@ public class CGen {
    }
    
    /**
-    * Register the calls and blocks for all the methods, so that we can prepare them.
+    * Register the return values of instructions.
     * @param root AST root.
     * @param cname Class name.
     * @param mname Method name.
     * @param nlets Imbrication level of calls.
     */
-   private void registerCalls(ASTNode root, String cname, String mname) {
-      if(root.itype == SymbolValue.CLASS) {
-         cname = root.getChildren().get(0).getValue().toString();
-      } else if(root.stype.equals("method")) {
-         mname = root.getChildren().get(0).getValue().toString();
-         cmapping.put(cname + "_" + mname, new LinkedList<String>());
-         ctypes.put(cname + "_" + mname, new LinkedList<String>());
-         bmapping.put(cname + "_" + mname, new LinkedList<String>());
-         btypes.put(cname + "_" + mname, new LinkedList<String>());
-      } else if(root.stype.equals("call")) {
-         cmapping.get(cname + "_" + mname).add("_call__" + CGen.randomString());
-         ctypes.get(cname + "_" + mname).add(CGen.localType(root.getChildren().get(0).getProp("type").toString()));
-      } else if(root.stype.equals("block")) {
-         bmapping.get(cname + "_" + mname).add("_ret__" + CGen.randomString());
-         btypes.get(cname + "_" + mname).add(CGen.localType(root.getChildren().get(0).getProp("type").toString()));
+   private void registerInsts(ASTNode root, String cname, String mname) {
+      if(root.ending) {
+         switch(root.itype) {
+            case SymbolValue.CLASS:
+               cname = root.getChildren().get(0).getValue().toString();
+               break;
+            case SymbolValue.NOT:
+            case SymbolValue.EQUAL:
+            case SymbolValue.AND:
+            case SymbolValue.LOWER_EQUAL:
+            case SymbolValue.LOWER:
+            case SymbolValue.PLUS:
+            case SymbolValue.MINUS:
+            case SymbolValue.TIMES:
+            case SymbolValue.DIV:
+            case SymbolValue.POW:
+            case SymbolValue.ISNULL:
+            case SymbolValue.NEW:
+            case SymbolValue.INTEGER_LITERAL:
+            case SymbolValue.STRING_LITERAL:
+            case SymbolValue.OBJECT_IDENTIFIER:
+            case SymbolValue.FALSE:
+            case SymbolValue.TRUE:
+            case SymbolValue.UNIT_VALUE:
+               imapping.get(cname + "_" + mname).put(root, CGen.randomString());
+               itypes.get(cname + "_" + mname).put(root, root.getProp("type").toString());
+               break;
+            default:
+               break;
+         }
+      } else {
+         switch(root.stype) {
+            case "method":
+               mname = root.getChildren().get(0).getValue().toString();
+               imapping.put(cname + "_" + mname, new HashMap<ASTNode, String>());
+               itypes.put(cname + "_" + mname, new HashMap<ASTNode, String>());
+               break;
+            case "call":
+            case "assign":
+            case "block":
+            case "if":
+            case "let":
+            case "uminus":
+               imapping.get(cname + "_" + mname).put(root, CGen.randomString());
+               itypes.get(cname + "_" + mname).put(root, root.getProp("type").toString());
+               break;
+            default:
+               break;
+         }
       }
       
       for(ASTNode a : root.getChildren())
-         registerCalls(a, cname, mname);
+         registerInsts(a, cname, mname);
    }
    
    /**
@@ -459,25 +486,19 @@ public class CGen {
                //Start building method
                tryAddSig(root, cname, new ArrayList<String>(), new ArrayList<CSignature>(), true, true);
                sb.deleteCharAt(sb.length() - 1);
-               sb.append(" {" + CGen.localType(root.getProp("type").toString()) + " _ret__; ");
+               sb.append(" {");
                mname = root.getChildren().get(0).getValue().toString();
                //Now add local defined by "let"'s variables.
                for(int i = 0; i < lets.get(cname + "_" + mname).size(); i++) {
                   sb.append(letstypes.get(cname + "_" + mname).get(i) + " " + lets.get(cname + "_" + mname).get(i) + "; ");
                }
-               //Now add local defined by calls variables.
-               for(int i = 0; i < cmapping.get(cname + "_" + mname).size(); i++) {
-                  sb.append(ctypes.get(cname + "_" + mname).get(i) + " " + cmapping.get(cname + "_" + mname).get(i) + "; ");
-               }
-               //Now add local defined by blocks variables.
-               for(int i = 0; i < bmapping.get(cname + "_" + mname).size(); i++) {
-                  sb.append(btypes.get(cname + "_" + mname).get(i) + " " + bmapping.get(cname + "_" + mname).get(i) + "; ");
+               //Now add local defined by instruction variables.
+               for(Map.Entry<ASTNode, String> iname : imapping.get(cname + "_" + mname).entrySet()) {
+                  sb.append(itypes.get(cname + "_" + mname).get(iname.getKey()) + " " + iname.getValue() + "; ");
                }
                //Now build body
-               rlabel.push("_ret__");
-               buildBody(cname, mname, root.getChildren().size() > 3? root.getChildren().get(3) : root.getChildren().get(2), 0);
-               rlabel.pop();
-               sb.append("return _ret__;} ");
+               buildBody(cname, mname, root.getChildren().get(root.getChildren().size() > 3? 3 : 2), 0);
+               sb.append("return " + imapping.get(cname + "_" + mname).get(root.getChildren().get(root.getChildren().size() > 3? 3 : 2)) + ";} ");
                break;
             case "field":
                c = (CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cname);
@@ -544,134 +565,96 @@ public class CGen {
       boolean has;
       int top;
       String tmp;
-      StringBuilder save, t;
+      
+      if(root.stype.equals("let")) {
+         for(ASTNode a : root.getChildren()) {
+            buildBody(cname, mname, a, nlets + 1);
+         }
+      } else {
+         for(ASTNode a : root.getChildren()) {
+            buildBody(cname, mname, a, nlets);
+         }
+      }
       
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.NOT:
-               sb.append("(!");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = !" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
                break;
             case SymbolValue.EQUAL:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" == ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.AND:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" & ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") & (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.LOWER_EQUAL:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" <= ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") <= (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.LOWER:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" < ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") < (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.PLUS:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" + ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") + (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.MINUS:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" - ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") - (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.TIMES:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" * ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") * (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.DIV:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" / ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") / (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.POW:
-               sb.append("__pow(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(", ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
-               break;
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = __pow((" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + "), (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + "));");
             case SymbolValue.ISNULL:
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" == 0)");
-               break;
-            case SymbolValue.ASSIGN:
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == 0;");
                break;
             case SymbolValue.NEW:
-               sb.append("(" + root.getProp("type").toString() + "_init__(GC_MALLOC(sizeof(" + root.getProp("type").toString() + "_struct))))");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getProp("type").toString() + "_init__(GC_MALLOC(sizeof(" + root.getProp("type").toString() + "_struct)));");
                break;
             case SymbolValue.INTEGER_LITERAL:
-               sb.append("(" + (int)root.getValue() + ")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + (int)root.getValue() + ";");
                break;
             case SymbolValue.STRING_LITERAL:
-               sb.append("(" + regName(root.getValue().toString()) + ")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + regName(root.getValue().toString()) + ";");
                break;
             case SymbolValue.OBJECT_IDENTIFIER:
                if(root.getValue().toString().equals("self"))
-                  sb.append("(self)");
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = self;");
                else if(root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString()) == null)
-                  sb.append("(self->" + root.getValue().toString() + ")");
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = self->" + root.getValue().toString() + ";");
                else {
                   top = nlets;
                   do {
                      if((tmp = lmapping.get(cname + mname + top + ">" + root.getValue().toString())) != null) {
-                        sb.append("(" + lmapping.get(cname + mname + top + ">" + root.getValue().toString()) + ")");
+                        sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + lmapping.get(cname + mname + top + ">" + root.getValue().toString()) + ";");
                         break;
                      }
                      top--;
                   } while(top > -1);
                   if(top == -1) {
-                     sb.append("(" + root.getValue().toString() + ")");
+                     sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getValue().toString() + ";");
                   }
                }
                break;
             case SymbolValue.FALSE:
-               sb.append("(0)");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
                break;
             case SymbolValue.TRUE:
-               sb.append("(1)");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = 1;");
                break;
             case SymbolValue.UNIT_VALUE:
-               sb.append("(0)");
-               break;
-            case SymbolValue.INT32:
-               sb.append("(int)");
-               break;
-            case SymbolValue.BOOL:
-               sb.append("(char)");
-               break;
-            case SymbolValue.UNIT:
-               sb.append("(char)");
-               break;
-            case SymbolValue.STRING:
-               sb.append("(char*)");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
                break;
             default:
                System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
@@ -680,100 +663,47 @@ public class CGen {
       } else {
          switch(root.stype) {
             case "call":
-               //TODO: make sure values are stacked in right order
                has = root.getChildren().size() > 2;
-               top = bcins.pop();
-               tmp = cmapping.get(cname + "_" + mname).poll();
-               sb.insert(top, tmp + " = ");
-               top += (tmp + " = ").length();
-               //Save and run
-               save = sb;
-               t = sb = new StringBuilder();
-               bcins.push(0);
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               bcins.pop();
-               sb = save;
-               sb.insert(top, t.toString() + "; ");
-               top += (t.toString() + "; ").length();
-               bcins.push(top);
-               //Now that preparation of callee is done, build the call
-               sb.append("(" + tmp + "->_vtable->" + root.getChildren().get(1).getValue().toString() + "(" + tmp + ",");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + "->_vtable->" +
+                        root.getChildren().get(1).getValue().toString() + "(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ",");
                if(has) {
                   for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
-                     buildBody(cname, mname, root.getChildren().get(2).getChildren().get(i), nlets);
-                     sb.append(",");
+                     sb.append(imapping.get(cname + "_" + mname).get(root.getChildren().get(2).getChildren().get(i)) + ",");
                   }
                }
                sb.deleteCharAt(sb.length() - 1);
-               sb.append("))");
+               sb.append(");");
                break;
             case "assign":
-               sb.append("(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(" = ");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") = (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case "block":
-               //When we have a block, we create an accumulator for it. 
-               rlabel.push(bmapping.get(cname + "_" + mname).poll());
-               sb.append("{");
-               bcins.push(sb.length());
-               for(int i = 0; i < root.getChildren().size() - 1; i++) {
-                  bcins.pop();
-                  bcins.push(sb.length());
-                  buildBody(cname, mname, root.getChildren().get(i), nlets);
-                  sb.append("; ");
-               }
-               bcins.pop();
-               bcins.push(sb.length());
-               //If we reached bottom of stack, is the enclosing block of a method, and save in the global return
-               tmp = rlabel.pop();
-               sb.append(rlabel.peek() + " = ");
-               buildBody(cname, mname, root.getChildren().get(root.getChildren().size() - 1), nlets);
-               bcins.pop();
-               sb.append(";} ");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(root.getChildren().size() - 1)) + ";");
                break; 
             case "if":
-               sb.append("((");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(")? (");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append(") : (");
-               if(root.getChildren().size() > 2) {
-                  buildBody(cname, mname, root.getChildren().get(2), nlets);
-               } else {
-                  sb.append("0");
-               }
-               sb.append("))");
+               //TODO: if
                break;
             case "while":
-               sb.append("while(");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(") {");
-               buildBody(cname, mname, root.getChildren().get(1), nlets);
-               sb.append("} ");
+               //TODO: while
                break;
             case "let":
                tmp = lmapping.get(cname + mname + nlets + ">" + root.getChildren().get(0).getValue().toString());
                if(root.getChildren().size() > 3) {
                   //Initialized
-                  sb.append(tmp + " = ");
-                  buildBody(cname, mname, root.getChildren().get(2), nlets);
-                  sb.append("; ");
+                  sb.append(tmp + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(2)) + ";");
                } else {
                   //Unitialized!
                   sb.append(getDefaultForType(tmp, root.getChildren().get(1).getProp("type").toString()));
                }
                top = root.getChildren().size() > 3? 3 : 2;
                //Build the return
-               nlets++;
-               buildBody(cname, mname, root.getChildren().get(top), nlets);
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(top) + ";"));
                break;
             case "uminus":
-               sb.append("(-");
-               buildBody(cname, mname, root.getChildren().get(0), nlets);
-               sb.append(")");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = -(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ");");
                break;
             default:
                System.err.println("code generation error: should never get here: type " + ASTNode.typeValue(root));
