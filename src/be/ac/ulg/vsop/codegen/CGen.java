@@ -32,6 +32,7 @@ public class CGen {
    private HashMap<String, ArrayList<String>> lets, letstypes;
    private HashMap<String, String> lmapping; //Used for "let"'s definitions of temp variables
    private HashMap<String, HashMap<ASTNode, String>> imapping, itypes; //Used for all instructions returns
+   private HashMap<ASTNode, String[]> brlabels; //Labels used for branchings
    private ArrayList<String> cdef; //All defined classes, in their order of definition
    
    /**
@@ -68,6 +69,7 @@ public class CGen {
       lmapping = new HashMap<String, String>();
       imapping = new HashMap<String, HashMap<ASTNode, String>>();
       itypes = new HashMap<String, HashMap<ASTNode, String>>();
+      brlabels = new HashMap<ASTNode, String[]>();
       cdef = new ArrayList<String>();
       
       //Create pow function, for pow in VSOP
@@ -317,7 +319,6 @@ public class CGen {
     * @param root AST root.
     * @param cname Class name.
     * @param mname Method name.
-    * @param nlets Imbrication level of calls.
     */
    private void registerInsts(ASTNode parent, ASTNode root, String cname, String mname) {
       ScopeItem si;
@@ -370,10 +371,14 @@ public class CGen {
                imapping.put(cname + "_" + mname, new HashMap<ASTNode, String>());
                itypes.put(cname + "_" + mname, new HashMap<ASTNode, String>());
                break;
-            case "call":
+            case "while":
+               brlabels.put(root, new String[] {"_check__" + CGen.randomString(), "_endwhile__" + CGen.randomString()});
+               break;
+            case "if":
+               brlabels.put(root, new String[] {"_if__" + CGen.randomString(), "_else__" + CGen.randomString(), "_endif__" + CGen.randomString()});
+            case "call": //Fallthrough
             case "assign":
             case "block":
-            case "if":
             case "let":
             case "uminus":
                imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
@@ -572,7 +577,7 @@ public class CGen {
    * Add function body.
    * @param parent Parent node.
    * @param cname Class name.
-   * @param Method name.
+   * @param mname name.
    * @param root Current node.
    * @param nlets Imrication level for "let"'s.
    * @return Created return variable name if any is created for above block.
@@ -581,6 +586,38 @@ public class CGen {
       boolean has;
       int top;
       String tmp;
+
+      if(root.stype.equals("if")) {
+         buildBody(root, cname, mname, root.getChildren().get(0), nlets);
+         sb.append("if(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ")");
+         sb.append("goto " + brlabels.get(root)[0] + ";");
+         if(root.getChildren().size() > 2) {
+            sb.append("else goto " + brlabels.get(root)[1] + ";");
+         }
+         sb.append(brlabels.get(root)[0] + ":");
+         buildBody(root, cname, mname, root.getChildren().get(1), nlets);
+         sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname)
+                 .get(root.getChildren().get(1).getChildren().get(root.getChildren().get(1).getChildren().size() - 1)) + ";");
+         sb.append("goto " + brlabels.get(root)[2] + ";");
+         if(root.getChildren().size() > 2) {
+            sb.append(brlabels.get(root)[1] + ":");
+            buildBody(root, cname, mname, root.getChildren().get(2), nlets);
+            sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname)
+                    .get(root.getChildren().get(2).getChildren().get(root.getChildren().get(2).getChildren().size() - 1)) + ";");
+            sb.append("goto " + brlabels.get(root)[2] + ";");
+         }
+         sb.append(brlabels.get(root)[2] + ":");
+         return;
+      } else if(root.stype.equals("while")) {
+         sb.append(brlabels.get(root)[0] + ":");
+         sb.append("if(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") {");
+         buildBody(root, cname, mname, root.getChildren().get(1), nlets);
+         if(root.getChildren().size() > 2) {
+            sb.append("} else goto " + brlabels.get(root)[1] + ";");
+         }
+         sb.append(brlabels.get(root)[1] + ":");
+         return;
+      }
       
       if(root.stype.equals("let")) {
          for(ASTNode a : root.getChildren()) {
@@ -710,12 +747,6 @@ public class CGen {
             case "block":
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " +
                         imapping.get(cname + "_" + mname).get(root.getChildren().get(root.getChildren().size() - 1)) + ";");
-               break; 
-            case "if":
-               //TODO: if
-               break;
-            case "while":
-               //TODO: while
                break;
             case "let":
                tmp = lmapping.get(cname + mname + nlets + ">" + root.getChildren().get(0).getValue().toString());
@@ -729,7 +760,7 @@ public class CGen {
                top = root.getChildren().size() > 3? 3 : 2;
                //Build the return
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " +
-                        imapping.get(cname + "_" + mname).get(root.getChildren().get(top) + ";"));
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(top)) + ";");
                break;
             case "uminus":
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = -(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ");");
