@@ -92,11 +92,12 @@ public class Analyzer {
    
    /**
     * Finds a field in the scope of the class or parent classes.
+    * @param ext Extensions.
     * @param root The node whose name must be resolved.
     * @param type Name of the class.
     * @return Node or null.
     */
-   private ScopeItem findFieldAbove(ASTNode root, String type) {
+   public static ScopeItem findFieldAbove(HashMap<String, String> ext, ASTNode root, String type) {
       ScopeItem si, ret;
       do {
          si = root.scope.get(ScopeItem.CLASS, type);
@@ -122,7 +123,7 @@ public class Analyzer {
       if(node.itype == SymbolValue.OBJECT_IDENTIFIER) {
          ret = root.scope.get(ScopeItem.FIELD, node.getValue().toString());
          if(ret == null)
-            ret = findFieldAbove(node, cname);
+            ret = Analyzer.findFieldAbove(ext, node, cname);
          if(ret == null && fonly)
             throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error used symbol " + node.getValue().toString() +
                      " not the way it was defined");

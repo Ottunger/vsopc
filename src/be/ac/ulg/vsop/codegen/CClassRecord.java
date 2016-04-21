@@ -10,7 +10,7 @@ public class CClassRecord {
    public ArrayList<String> fields, types;
    public ArrayList<String> meths;
    public ArrayList<CSignature> sigs;
-   public int initb;
+   public int inits, initb;
 
    /**
     * Records info about a class at top level.
@@ -20,11 +20,12 @@ public class CClassRecord {
     * @param sigs List of method signatures.
     * @param initb Init position.
     */
-   public CClassRecord(ArrayList<String> fields, ArrayList<String> types, ArrayList<String> meths, ArrayList<CSignature> sigs, int initb) {
+   public CClassRecord(ArrayList<String> fields, ArrayList<String> types, ArrayList<String> meths, ArrayList<CSignature> sigs, int inits, int initb) {
       this.fields = fields;
       this.types = types;
       this.meths = meths;
       this.sigs = sigs;
+      this.inits = inits;
       this.initb = initb;
    }
 
