@@ -77,6 +77,8 @@ public class CGen {
       aft = sb.length();
       sb.append("int __pow(int a, int b); int __pow(int a, int b)"
                + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
+      //Define Object_struct. What did you expect?
+      sb.append("typedef void Object_struct; ");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
                + "IO_struct* IO_printInt(IO_struct*, int); struct IO_vtable {IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int);"
@@ -85,6 +87,7 @@ public class CGen {
                + "printf(\"%d\\n\", num); return self;}");
       
       //From a first pass, generate the structures that classes rely are
+      genTypedefs(ast, true);
       while(classes.size() > 0)
          genStructures(ast, true, false);
       //From a second pass, generate the list of all declared local variable for each
@@ -135,6 +138,32 @@ public class CGen {
    }
    
    /**
+    * Generate typedefs into builder.
+    * @param root AST.
+    * @param pass Reached classes.
+    */
+   private void genTypedefs(ASTNode root, boolean pass) {
+      String type;
+      
+      if(root.ending) {
+         switch(root.itype) {
+            case SymbolValue.CLASS:
+               type = root.getChildren().get(0).getValue().toString();
+               sb.append("typedef struct " + type + "_struct " + type + "_struct; ");
+               break;
+            default:
+               break;
+         }
+      }
+      
+      if(pass) {
+         for(ASTNode r : root.getChildren()) {
+            genTypedefs(r, false);
+         }
+      }
+   }
+   
+   /**
     * Generate structures into builder.
     * @param root AST.
     * @param pass Reached classes.
@@ -161,7 +190,7 @@ public class CGen {
                   //Place the full structure
                   type = root.getChildren().get(0).getValue().toString();
                   sb.append("typedef struct " + type + "_vtable " + type + "_vtable; ");
-                  sb.append("typedef struct " + type + "_struct {" + type + "_vtable* _vtable; ");
+                  sb.append("struct " + type + "_struct {" + type + "_vtable* _vtable; ");
                   fields = new ArrayList<String>();
                   types = new ArrayList<String>();
                   do {
@@ -181,7 +210,7 @@ public class CGen {
                         cType(fields.get(i), types.get(i));
                   }
                   type = root.getChildren().get(0).getValue().toString();
-                  sb.append("} " + type + "_struct; ");
+                  sb.append("}; ");
                   
                   //Now getting to the vtable definition, which may be inherited
                   //Prepare vtable definition
@@ -254,7 +283,7 @@ public class CGen {
                   }
                   sb.append("self->_vtable = &" + type + "_static_vtable; ");
                   //Register class then close so far the init, after having saved where to insert.
-                  ast.scope.put(ScopeItem.CTYPE, type, new CClassRecord(fields, types, methods, sigs, sb.length()));
+                  ast.scope.put(ScopeItem.CTYPE, type, new CClassRecord(fields, types, methods, sigs, sb.length(), sb.length()));
                   sb.append("return self; } ");
                   
                   //And we have defined ourself :)
@@ -285,9 +314,7 @@ public class CGen {
     * @param nlets Imbrication level of "let"'s.
     */
    private void registerLets(ASTNode root, String cname, String mname, int nlets) {
-      int top;
       String gen;
-      ASTNode insert;
       
       if(root.itype == SymbolValue.CLASS) {
          cname = root.getChildren().get(0).getValue().toString();
@@ -489,14 +516,31 @@ public class CGen {
     * @param root Where we are.
     */
    private void genFunctions(String cname, ASTNode root) {
-      int shift, j;
+      int shift = 0, j;
       String mname;
       StringBuilder save, tmp;
       CClassRecord c;
       
       if(root.ending == false) {
+         c = (CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cname);
          switch(root.stype) {
             case "method":
+               //When the first method is met, we have written all fields push theit instruction savers.
+               if(c.inits != 0) {
+                  //Now add local defined by instruction variables.
+                  for(Map.Entry<ASTNode, String> iname : imapping.get(cname + "_" + null).entrySet()) {
+                     sb.insert(c.inits, itypes.get(cname + "_" + null).get(iname.getKey()) + " " + iname.getValue() + "; ");
+                     shift += (itypes.get(cname + "_" + null).get(iname.getKey()) + " " + iname.getValue() + "; ").length();
+                  }
+                  c.inits = 0;
+                  //All classes defined after us must shift were to insert
+                  j = cdef.indexOf(cname);
+                  for(int i = j + 1; i < cdef.size(); i++) {
+                     ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).initb += shift;
+                     ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).inits += shift;
+                  }
+               }
+               
                //Start building method
                tryAddSig(root, cname, new ArrayList<String>(), new ArrayList<CSignature>(), true, true);
                sb.deleteCharAt(sb.length() - 1);
@@ -515,7 +559,6 @@ public class CGen {
                sb.append("return " + imapping.get(cname + "_" + mname).get(root.getChildren().get(root.getChildren().size() > 3? 3 : 2)) + ";} ");
                break;
             case "field":
-               c = (CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cname);
                if(root.getChildren().size() > 2) {
                   //Initialized
                   sb.insert(c.initb, "self->" + root.getChildren().get(0).getValue().toString() + " = ");
@@ -537,8 +580,10 @@ public class CGen {
                }
                //All classes defined after us must shift were to insert
                j = cdef.indexOf(cname);
-               for(int i = j + 1; i < cdef.size(); i++)
+               for(int i = j + 1; i < cdef.size(); i++) {
                   ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).initb += shift;
+                  ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).inits += shift;
+               }
                break;
             default:
                break;
@@ -638,8 +683,7 @@ public class CGen {
       for(ASTNode a : root.getChildren()) {
          buildBody(root, cname, mname, a, nlets);
       }
-      //TODO: When type of local instr is no pointer, should pointerize it (for returns, at least, when else?)
-      //TODO: Call dereference fail? Check on provided VSOP file
+
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.NOT:
