@@ -579,7 +579,7 @@ public class CGen {
    private void buildBody(ASTNode parent, String cname, String mname, ASTNode root, int nlets) {
       boolean has;
       int top;
-      String tmp, tmptype;
+      String tmp;
 
       if(root.stype.equals("if")) {
          buildBody(root, cname, mname, root.getChildren().get(0), nlets);
@@ -752,12 +752,9 @@ public class CGen {
                sb.append(");");
                break;
             case "assign":
-               tmptype = Analyzer.findFieldAbove(ext, root.getChildren().get(0), cname).userType.getProp("type").toString();
-               has = (root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) == null &&
-                       tmptype.equals("int32") || tmptype.equals("bool") || tmptype.equals("unit"));
+               has = (root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) == null);
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" +
-                       (has? ("self->" + root.getChildren().get(0).getValue().toString()) :
-                       imapping.get(cname + "_" + mname).get(root.getChildren().get(0))) +
+                       (has? "self->" : "") + root.getChildren().get(0).getValue().toString() +
                        ") = (" +  imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case "block":
