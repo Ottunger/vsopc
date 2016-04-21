@@ -638,9 +638,10 @@ public class CGen {
          sb.append(brlabels.get(root)[1] + ":");
          return;
       } else if(root.stype.equals("let")) {
-         //Build the children, init and body
-         for(ASTNode a : root.getChildren()) {
-            buildBody(root, cname, mname, a, nlets + 1);
+         has = root.getChildren().size() > 3;
+         //Build the children only up until init
+         for(int i = 0; i < (has? 3 : 2); i++) {
+            buildBody(root, cname, mname, root.getChildren().get(i), nlets + 1);
          }
          //Build our values
          tmp = lmapping.get(cname + mname + nlets + ">" + root.getChildren().get(0).getValue().toString());
@@ -651,10 +652,11 @@ public class CGen {
             //Unitialized!
             sb.append(getDefaultForType(tmp, root.getChildren().get(1).getProp("type").toString()));
          }
-         top = root.getChildren().size() > 3? 3 : 2;
+         //Build the body
+         buildBody(root, cname, mname, root.getChildren().get(has? 3 : 2), nlets + 1);
          //Build the return
          sb.append(imapping.get(cname + "_" + mname).get(root) + " = " +
-                 imapping.get(cname + "_" + mname).get(root.getChildren().get(top)) + ";");
+                 imapping.get(cname + "_" + mname).get(root.getChildren().get(has? 3 : 2)) + ";");
          return;
       }
 
@@ -663,7 +665,6 @@ public class CGen {
          buildBody(root, cname, mname, a, nlets);
       }
       //TODO: When type of local instr is no pointer, should pointerize it (for returns, at least, when else?)
-      //TODO: Some instructions are skipped when not saved? Check on provided VSOP file
       //TODO: Call dereference fail? Check on provided VSOP file
       if(root.ending) {
          switch(root.itype) {
