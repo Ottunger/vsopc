@@ -349,14 +349,10 @@ public class CGen {
                //Skip if we are the name of a method, or the name of the method in a call
                if(!parent.stype.equals("method") && !(parent.stype.equals("call") && parent.getChildren().get(1) == root)) {
                   si = root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString());
-                  if(si == null) {
+                  if(si == null)
                      si = Analyzer.findFieldAbove(ext, root, cname);
-                     imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
-                     itypes.get(cname + "_" + mname).put(root, CGen.localType(si.userType.getProp("type").toString(), true));
-                  } else {
-                     imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
-                     itypes.get(cname + "_" + mname).put(root, CGen.localType(si.userType.getProp("type").toString()));
-                  }
+                  imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
+                  itypes.get(cname + "_" + mname).put(root, CGen.localType(si.userType.getProp("type").toString()));
                }
                break;
             default:
@@ -406,28 +402,6 @@ public class CGen {
             return "char*";
          case "unit":
             return "char";
-         default:
-            //Is a pointer
-            return type + "_struct*";
-      }
-   }
-
-   /**
-    * Type in C.
-    * @param type Type.
-    * @param pointerize Whether to pointerize a plain type.
-    * @return C type.
-    */
-   private static String localType(String type, boolean pointerize) {
-      switch(type) {
-         case "int32":
-            return "int*";
-         case "bool":
-            return "char*";
-         case "String":
-            return "char*";
-         case "unit":
-            return "char*";
          default:
             //Is a pointer
             return type + "_struct*";
@@ -728,9 +702,7 @@ public class CGen {
                if(root.getValue().toString().equals("self"))
                   sb.append(imapping.get(cname + "_" + mname).get(root) + " = self;");
                else if(root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString()) == null) {
-                  tmptype = Analyzer.findFieldAbove(ext, root, cname).userType.getProp("type").toString();
-                  has = (tmptype.equals("int32") || tmptype.equals("bool") || tmptype.equals("unit"));
-                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + (has? "&" : "") + "self->" + root.getValue().toString() + ";");
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = self->" + root.getValue().toString() + ";");
                } else {
                   top = nlets;
                   do {
@@ -783,8 +755,10 @@ public class CGen {
                tmptype = Analyzer.findFieldAbove(ext, root.getChildren().get(0), cname).userType.getProp("type").toString();
                has = (root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) == null &&
                        tmptype.equals("int32") || tmptype.equals("bool") || tmptype.equals("unit"));
-               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + (has? "*" : "") + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") = (" +
-                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" +
+                       (has? ("self->" + root.getChildren().get(0).getValue().toString()) :
+                       imapping.get(cname + "_" + mname).get(root.getChildren().get(0))) +
+                       ") = (" +  imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case "block":
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " +
