@@ -636,24 +636,23 @@ public class CGen {
          sb.append(brlabels.get(root)[0] + ":");
          buildBody(root, cname, mname, root.getChildren().get(1), nlets);
          sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname)
-                 .get(root.getChildren().get(1).getChildren().get(root.getChildren().get(1).getChildren().size() - 1)) + ";");
+                 .get(root.getChildren().get(1)) + ";");
          sb.append("goto " + brlabels.get(root)[2] + ";");
          if(root.getChildren().size() > 2) {
             sb.append(brlabels.get(root)[1] + ":");
             buildBody(root, cname, mname, root.getChildren().get(2), nlets);
             sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname)
-                    .get(root.getChildren().get(2).getChildren().get(root.getChildren().get(2).getChildren().size() - 1)) + ";");
+                    .get(root.getChildren().get(2)) + ";");
             sb.append("goto " + brlabels.get(root)[2] + ";");
          }
          sb.append(brlabels.get(root)[2] + ":");
          return;
       } else if(root.stype.equals("while")) {
          sb.append(brlabels.get(root)[0] + ":");
+         buildBody(root, cname, mname, root.getChildren().get(0), nlets);
          sb.append("if(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") {");
          buildBody(root, cname, mname, root.getChildren().get(1), nlets);
-         if(root.getChildren().size() > 2) {
-            sb.append("} else goto " + brlabels.get(root)[1] + ";");
-         }
+         sb.append("} else goto " + brlabels.get(root)[1] + ";");
          sb.append(brlabels.get(root)[1] + ":");
          return;
       } else if(root.stype.equals("let")) {
