@@ -467,7 +467,7 @@ class CUP$VSOPParser$actions {
 		int tleft = ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()).left;
 		int tright = ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()).right;
 		Symbol t = (Symbol)((java_cup.runtime.Symbol) CUP$VSOPParser$stack.peek()).value;
-		 Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "String"); 
+		 Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); 
               CUP$VSOPParser$result = parser.getSymbolFactory().newSymbol("types",0, ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()), ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()), RESULT);
             }
           return CUP$VSOPParser$result;
@@ -515,7 +515,7 @@ class CUP$VSOPParser$actions {
 		int tleft = ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()).left;
 		int tright = ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()).right;
 		Symbol t = (Symbol)((java_cup.runtime.Symbol) CUP$VSOPParser$stack.peek()).value;
-		 Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "String"); 
+		 Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); 
               CUP$VSOPParser$result = parser.getSymbolFactory().newSymbol("lit",1, ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()), ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()), RESULT);
             }
           return CUP$VSOPParser$result;

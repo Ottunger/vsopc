@@ -17,29 +17,31 @@ public class Compiler {
     * @param args Arguments.
     */
 	public static void main(String[] args) {
-		final int findex = (args.length > 1)? 1 : 0;
+		int findex = (args.length > 1)? 1 : 0;
+		boolean ext = (findex == 1 && args[1].equals("-ext")) || ((args.length > 1) && args[0].equals("-ext"));
+		if(ext) findex++;
 		FileReader file = null;
 		
 		if(args.length < 1) {
-			System.out.println("Not enough params");
-			System.out.println("Usage: java -jar Compiler.jar <source_file>");
+			System.err.println("Not enough params");
+			System.err.println("Usage: java -jar Compiler.jar [-lex | -parse | -check | -c | -llvm | -ext] <source_file>");
 			System.exit(1);
 		}
-		if(!args[findex].endsWith(".vsop")) {
-		   System.out.println("Input file is not VSOP");
+		if(!args[findex].endsWith(".vsop") && !args[findex].endsWith(".ve")) {
+		   System.err.println("Input file is not VSOP(.vsop) nor VSOPExtended(.ve)");
          System.exit(1);
 		}
 		try {
 			file = new ReaderWrapper(new File(args[findex]));
 		} catch (FileNotFoundException e) {
-			System.out.println("File opening error");
-			System.out.println("Usage: java -jar Compiler.jar <source_file>");
+			System.err.println("File opening error");
+			System.err.println("Usage: java -jar Compiler.jar [-lex | -parse | -check | -c | -llvm | -ext] <source_file>");
 			System.exit(1);
 		}
 		
-		Lexer lexer = new Lexer(file, args[findex]);
+		Lexer lexer = new Lexer(file, args[findex], ext);
 		lexer.parse();
-		if(findex == 1 && args[0].equals("-lex")) {
+		if(findex > 0 && args[0].equals("-lex")) {
 			lexer.dumpTokens();
 			System.exit(lexer.isParseFailed()? 1 : 0);
 		}
@@ -48,9 +50,9 @@ public class Compiler {
          System.exit(1);
       }
 		
-		Parser parser = new Parser(lexer);
+		Parser parser = new Parser(lexer, ext);
 		parser.parse();
-      if(findex == 1 && args[0].equals("-parse")) {
+      if(findex > 0 && args[0].equals("-parse")) {
          parser.dumpTree(false);
          System.exit(parser.isParseFailed()? 1 : 0);
       }
@@ -61,7 +63,7 @@ public class Compiler {
       
       Analyzer a = null;
       try {
-         a = new Analyzer();
+         a = new Analyzer(ext);
          a.regScope(parser.getRoot());
       } catch(Exception e) {
          System.err.println(lexer.name + ":" + e.getMessage());e.printStackTrace();
@@ -73,12 +75,12 @@ public class Compiler {
          System.exit(0);
       }
       
-      CGen gen = new CGen(parser.getRoot(), a.getExt());
+      CGen gen = new CGen(parser.getRoot(), a.getExt(), ext);
       try {
-         if(findex == 1 && args[0].equals("-llvm")) {
+         if(findex > 0 && args[0].equals("-llvm")) {
             gen.emit(System.out, null, CGen.LLVM);
             System.exit(0);
-         } else if(findex == 1 && args[0].equals("-c")) {
+         } else if(findex > 0 && args[0].equals("-c")) {
             gen.emit(System.out, null, CGen.C);
             System.exit(0);
          }
@@ -86,7 +88,7 @@ public class Compiler {
          System.out.println("Code generation completed !");
       } catch(Exception e) {
          e.printStackTrace();
-         System.out.println("Code emission error");
+         System.err.println("Code emission error");
          System.exit(1);
       }
       System.exit(0);

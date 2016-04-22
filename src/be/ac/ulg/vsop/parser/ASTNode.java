@@ -9,7 +9,7 @@ import be.ac.ulg.vsop.analyzer.Scope;
 import be.ac.ulg.vsop.lexer.Symbol;
 
 
-public class ASTNode {
+public class ASTNode implements Cloneable {
    
    private ArrayList<ASTNode> children;
    public boolean ending;
@@ -49,6 +49,20 @@ public class ASTNode {
       this.itype = -1;
       this.stype = stype;
       this.value = value;
+   }
+   
+   /**
+    * Clones this instance. Does not copy the scope.
+    * @return Copy.
+    */
+   public ASTNode clone() {
+      ASTNode r = new ASTNode(itype, value);
+      r.stype = stype;
+      r.ending = ending;
+      r.prop = new HashMap<String, Object>(prop);
+      for(ASTNode a : children)
+         r.children.add(a.clone());
+      return r;
    }
    
    /**

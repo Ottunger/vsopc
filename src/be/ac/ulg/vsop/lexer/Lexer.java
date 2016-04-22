@@ -7,7 +7,7 @@ import be.ac.ulg.vsop.parser.SymbolValue;
 
 public class Lexer {
 	
-	private boolean failed;
+	private boolean failed, extd;
 	public String name;
 	private FileReader file;
 	private ArrayList<Symbol> symbs;
@@ -16,49 +16,95 @@ public class Lexer {
 	 * Creates the Lexer.
 	 * @param in Opened file.
 	 * @param name Name of this file.
+	 * @param ext Whether to consider VSOPExtended.
 	 */
-	public Lexer(FileReader in, String name) {
+	public Lexer(FileReader in, String name, boolean ext) {
 		failed = true;
 		file = in;
 		this.name = name;
 		symbs = new ArrayList<Symbol>();
+		extd = ext;
 	}
 	
 	/**
 	 * Runs the parsing step and saves array of tokens.
 	 */
 	public void parse() {
-		boolean ok = true, esc;
-		Symbol s = null;
-		
 		if(file == null)
 			return;
-		VSOPParser p = new VSOPParser(file);
-		do {
-			esc = false;
-			try {
-				s = p.yylex();
-			} catch(Exception e) {
-				esc = true;
-				ok = false;
-				System.err.println(name + ":" + tryGuess(e.getMessage()));
-			}
-			if(s == null)
-				continue;
-			symbs.add(s);
-		} while(s != null || esc == true);
-		if(p.yystate() == VSOPParser.COMMENT) {
-			System.err.println(name + ":" + (p.rcomment.pop() + 1) + ":" + (p.ccomment.pop() + 1) + ": lexical error file ends with comment still open.");
-			return;
-		} else if(p.yystate() == VSOPParser.STRING || p.yystate() == VSOPParser.BYTESTRING) {
-			System.err.println(name + ":" + (p.rbegin + 1) + ":" + (p.cbegin + 1) + ": lexical error file ends with string still open.");
-			return;
-		}
-		if(ok) {
-		   symbs.add(new Symbol(SymbolValue.EOF, 0, 0));
-			failed = false;
-		}
+		if(extd)
+		   _parseExtd();
+		else
+		   _parse();
 	}
+	
+	/**
+	 * Internally runs the parsing.
+	 */
+	private void _parse() {
+	   boolean ok = true, esc;
+      Symbol s = null;
+      
+      VSOPParser p = new VSOPParser(file);
+      do {
+         esc = false;
+         try {
+            s = p.yylex();
+         } catch(Exception e) {
+            esc = true;
+            ok = false;
+            System.err.println(name + ":" + tryGuess(e.getMessage()));
+         }
+         if(s == null)
+            continue;
+         symbs.add(s);
+      } while(s != null || esc == true);
+      if(p.yystate() == VSOPParser.COMMENT) {
+         System.err.println(name + ":" + (p.rcomment.pop() + 1) + ":" + (p.ccomment.pop() + 1) + ": lexical error file ends with comment still open.");
+         return;
+      } else if(p.yystate() == VSOPParser.STRING || p.yystate() == VSOPParser.BYTESTRING) {
+         System.err.println(name + ":" + (p.rbegin + 1) + ":" + (p.cbegin + 1) + ": lexical error file ends with string still open.");
+         return;
+      }
+      if(ok) {
+         symbs.add(new Symbol(SymbolValue.EOF, 0, 0));
+         failed = false;
+      }
+	}
+	
+	/**
+    * Internally runs the parsing.
+    */
+   private void _parseExtd() {
+      boolean ok = true, esc;
+      Symbol s = null;
+      
+      VSOPExtendedParser p = new VSOPExtendedParser(file);
+      do {
+         esc = false;
+         try {
+            s = p.yylex();
+         } catch(Exception e) {
+            esc = true;
+            ok = false;
+            System.err.println(name + ":" + tryGuess(e.getMessage()));
+         }
+         if(s == null)
+            continue;
+         symbs.add(s);
+      } while(s != null || esc == true);
+      if(p.yystate() == VSOPParser.COMMENT) {
+         System.err.println(name + ":" + (p.rcomment.pop() + 1) + ":" + (p.ccomment.pop() + 1) + ": lexical error file ends with comment still open.");
+         return;
+      } else if(p.yystate() == VSOPParser.STRING || p.yystate() == VSOPParser.BYTESTRING) {
+         System.err.println(name + ":" + (p.rbegin + 1) + ":" + (p.cbegin + 1) + ": lexical error file ends with string still open.");
+         return;
+      }
+      if(ok) {
+         symbs.add(new Symbol(SymbolValue.EOF, 0, 0));
+         failed = false;
+      }
+   }
 	
 	/**
 	 * Tries to guess what parsing error happened based on resulting string.

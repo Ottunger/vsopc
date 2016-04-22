@@ -8,10 +8,7 @@ public class ScopeItem {
    public static final int FIELD = 0;
    public static final int METHOD = 1;
    public static final int CLASS = 2;
-   public static final int LLVMTYPE = 3;
-   public static final int LLVMVALUE = 4;
    public static final int CTYPE = 5;
-   public static final int CVALUE = 6;
    public static final int VOID = -1;
    
    public int type, stype, level;

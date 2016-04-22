@@ -25,6 +25,7 @@ public class CGen {
    public final static char C = 'C';
    public final static char EXE = 'E';
    
+   private boolean extd;
    private ASTNode ast;
    private HashMap<String, String> ext, strs;
    StringBuilder sb;
@@ -39,10 +40,12 @@ public class CGen {
     * Build a C generator.
     * @param root AST.
     * @param ext Inheritances.
+    * @param extd Whether to consider VSOPExtended.
     */
-   public CGen(ASTNode root, HashMap<String, String> ext) {
+   public CGen(ASTNode root, HashMap<String, String> ext, boolean extd) {
       ast = root;
       this.ext = ext;
+      this.extd = extd;
    }
    
    /**
@@ -56,7 +59,7 @@ public class CGen {
       
       classes = new HashSet<String>(ext.keySet());
       classes.remove("Object");
-      classes.remove("String");
+      classes.remove("string");
       classes.remove("int32");
       classes.remove("bool");
       classes.remove("unit");
@@ -425,7 +428,7 @@ public class CGen {
             return "int";
          case "bool":
             return "char";
-         case "String":
+         case "string":
             return "char*";
          case "unit":
             return "char";
@@ -497,7 +500,7 @@ public class CGen {
          case "bool":
             sb.append("char " + fname + "; ");
             break;
-         case "String":
+         case "string":
             sb.append("char* " + fname + "; ");
             break;
          case "unit":
@@ -602,7 +605,7 @@ public class CGen {
             return field + " = 0; ";
          case "bool":
             return field + " = 0; ";
-         case "String":
+         case "string":
             return field + " = GC_MALLOC(sizeof(char)); " + field + "[0] = '\0'; "; 
          case "unit":
             return field + " = 0; ";
@@ -616,7 +619,7 @@ public class CGen {
    * Add function body.
    * @param parent Parent node.
    * @param cname Class name.
-   * @param mname name.
+   * @param mname Method name.
    * @param root Current node.
    * @param nlets Imrication level for "let"'s.
    * @return Created return variable name if any is created for above block.

@@ -8,6 +8,7 @@ import be.ac.ulg.vsop.parser.SymbolValue;
 
 public class Analyzer {
    
+   private boolean extd;
    public static final String EMPTY = "vsopEMPTY";
    private HashMap<String, HashMap<String, ScopeItem>> prim;
    private HashMap<String, String> ext;
@@ -15,14 +16,16 @@ public class Analyzer {
 
    /**
     * Creates an analyzer.
+    * @param extd Whether to consider VSOPExtended.
     */
-   public Analyzer() {
+   public Analyzer(boolean extd) {
       ASTNode fms, tmp;
+      this.extd = extd;
       
       ext = new HashMap<String, String>();
       prim = new HashMap<String, HashMap<String, ScopeItem>>();
       ext.put("Object", Analyzer.EMPTY);
-      ext.put("String", Analyzer.EMPTY);
+      ext.put("string", Analyzer.EMPTY);
       ext.put("int32", Analyzer.EMPTY);
       ext.put("bool", Analyzer.EMPTY);
       ext.put("unit", Analyzer.EMPTY);
@@ -30,7 +33,7 @@ public class Analyzer {
       //There is one entry in $prim per recorded class, and it only registers their methods.
       //This table is only used at first to ensure basic knowledge of everything.
       prim.put("Object", new HashMap<String, ScopeItem>());
-      prim.put("String", new HashMap<String, ScopeItem>());
+      prim.put("string", new HashMap<String, ScopeItem>());
       prim.put("int32", new HashMap<String, ScopeItem>());
       prim.put("bool", new HashMap<String, ScopeItem>());
       prim.put("unit", new HashMap<String, ScopeItem>());
@@ -39,7 +42,7 @@ public class Analyzer {
       //Method print
       fms = new ASTNode("formals", "__dummy__");
       tmp = new ASTNode("formal", "__dummy__");
-      tmp.addProp("type", "String");
+      tmp.addProp("type", "string");
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
@@ -70,7 +73,7 @@ public class Analyzer {
    public void regScope(ASTNode root) throws Exception {
       ScopeItem si;
       root.scope.put(ScopeItem.CLASS, "Object", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "Object"), 0));
-      root.scope.put(ScopeItem.CLASS, "String", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "String"), 0));
+      root.scope.put(ScopeItem.CLASS, "string", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "string"), 0));
       root.scope.put(ScopeItem.CLASS, "int32", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "int32"), 0));
       root.scope.put(ScopeItem.CLASS, "bool", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "bool"), 0));
       root.scope.put(ScopeItem.CLASS, "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
@@ -248,16 +251,41 @@ public class Analyzer {
                            root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, cname, 0, true));
                //Then our type is the one of the method
                root.addProp("type", getNodeType(t.userType, cname, -1, false));
-               //Check ok arguments
-               if(((root.getChildren().size() == 2) != (t.formals == null)) || (root.getChildren().size() > 2 && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error wrong number of arguments to method " + root.getChildren().get(1).getValue());
-               } else if(root.getChildren().size() > 2) {
-                  for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
-                     String arg = getNodeType(root.getChildren().get(2), cname, i, true);
-                     String formal = getNodeType(t.formals, cname, i, true);
-                     if(!Analyzer.isSameOrChild(ext, arg, formal))
-                        throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
-                                 ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+               //Check ok arguments in both modes
+               if(extd) {
+                  if(root.getChildren().size() > 2 && (t.formals == null || (root.getChildren().get(2).getChildren().size() > t.formals.getChildren().size())))
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error too many arguments to method " + root.getChildren().get(1).getValue());
+                  if(root.getChildren().size() > 2) {
+                     for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
+                        String arg = getNodeType(root.getChildren().get(2), cname, i, true);
+                        String formal = getNodeType(t.formals, cname, i, true);
+                        if(!Analyzer.isSameOrChild(ext, arg, formal))
+                           throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
+                                    ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+                     }
+                  } else if(t.formals != null) {
+                     root.getChildren().add(2, new ASTNode("args", "__dummy__"));
+                  }
+                  if(t.formals != null) {
+                     for(int i = root.getChildren().get(2).getChildren().size(); i < t.formals.getChildren().size(); i++) {
+                        if(t.formals.getChildren().get(i).getChildren().size() < 3)
+                           throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
+                                    ": semantics error no default value for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+                        //Create nodes that will fill this method
+                        root.getChildren().get(2).getChildren().add(t.formals.getChildren().get(i).getChildren().get(2).clone());
+                     }
+                  }
+               } else {
+                  if(((root.getChildren().size() == 2) != (t.formals == null)) || (root.getChildren().size() > 2 && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error wrong number of arguments to method " + root.getChildren().get(1).getValue());
+                  } else if(root.getChildren().size() > 2) {
+                     for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
+                        String arg = getNodeType(root.getChildren().get(2), cname, i, true);
+                        String formal = getNodeType(t.formals, cname, i, true);
+                        if(!Analyzer.isSameOrChild(ext, arg, formal))
+                           throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
+                                    ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+                     }
                   }
                }
                break;
@@ -431,6 +459,8 @@ public class Analyzer {
                   root.addProp("type", getNodeType(root, cname, 1, false));
                   if(ext.get(getNodeType(root, cname, 1, false)) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, 1, false));
+                  if(root.getChildren().size() > 2 && !getNodeType(root, cname, 1, false).equals(getNodeType(root, cname, 2, false)))
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": default value doesn't match expected type: " + getNodeType(root, cname, 1, false));
                   break;
                case "field":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
@@ -470,7 +500,7 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " has been defined several times");
                ext.put(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getValue().toString());
                //Cannot extend built-in class String
-               if(root.getChildren().get(1).getValue().toString().equals("String") || root.getChildren().get(1).getValue().toString().equals("int32") ||
+               if(root.getChildren().get(1).getValue().toString().equals("string") || root.getChildren().get(1).getValue().toString().equals("int32") ||
                         root.getChildren().get(1).getValue().toString().equals("bool") || root.getChildren().get(1).getValue().toString().equals("unit"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " cannot extend built-in class or value");
                prim.put(root.getChildren().get(0).getValue().toString(), new HashMap<String, ScopeItem>());

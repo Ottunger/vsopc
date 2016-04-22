@@ -1,0 +1,43 @@
+class List {
+   head : int32;
+   isNil() : bool { true }
+   length() : int32 { 0 }
+   head() : int32 { head }
+}
+
+(* Nil is nothing more than a glorified alias to List *)
+class Nil extends List { }
+
+class Cons extends List {
+   tail : List;
+   init(hd : int32, tl : List) : Cons {
+      head <- hd;
+      tail <- tl;
+      self
+   }
+   isNil() : bool { false }
+   length() : int32 { 1 + tail.length() }
+   next() : List { tail }
+}
+
+class Main extends IO {
+   say2(a : int32, b : string : "Hi") : int32 {
+      printInt(a).print(b);
+      0
+   }
+   main() : int32 {
+      let s : int32 <- 4 in
+         let xs : Cons <- (new Cons).init(0, (new Cons).init(1, (new Cons).init(2, new Nil))) in {
+            xs.head();
+            print("Here");
+            printInt(xs.head());
+            print("Here");
+            printInt(xs.next().head());
+            print("Here");
+            printInt(1).printInt(xs.next().head()).printInt(xs.length()).printInt(xs.next().length()) };
+      print("Here at last");
+      say2(1, "Hehe");
+      say2(2);
+      0
+   }
+}

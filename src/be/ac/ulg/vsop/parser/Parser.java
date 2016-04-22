@@ -9,7 +9,7 @@ import be.ac.ulg.vsop.lexer.Symbol;
 
 public class Parser implements java_cup.runtime.Scanner {
    
-   private boolean failed;
+   private boolean failed, extd;
    private int index;
    private ArrayList<Symbol> tokens;
    private ASTNode root;
@@ -20,14 +20,16 @@ public class Parser implements java_cup.runtime.Scanner {
    /**
     * Creates a parser by getting the list of tokens.
     * @param lexer Lexer.
+    * @param ext Whether to consider VSOPExtended.
     */
-   public Parser(Lexer lexer) {
+   public Parser(Lexer lexer, boolean ext) {
       root = null;
       failed = true;
       tokens = lexer.getTokens();
       Parser.name = lexer.name;
       sb = new ScannerBuffer(this);
       Parser.lastLine = Parser.lastColumn = 0;
+      extd = ext;
    }
 
    /**
@@ -37,7 +39,7 @@ public class Parser implements java_cup.runtime.Scanner {
       index = 0;
       failed = false;
       
-      VSOPParser p = new VSOPParser(sb, new ComplexSymbolFactory());
+      java_cup.runtime.lr_parser p = extd? new VSOPExtendedParser(sb, new ComplexSymbolFactory()): new VSOPParser(sb, new ComplexSymbolFactory());
       try {
          root = (ASTNode)p.parse().value;
       } catch(Exception e) {
