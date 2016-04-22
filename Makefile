@@ -22,8 +22,10 @@ vsopc:
 	cd build; jar cvfm ../vsopcompiler.jar ../manifest ./* > /dev/null
 	echo "#! /bin/sh" > vsopc
 	echo "DIR=\$$(dirname "\$$0")" >> vsopc
-	echo "java -jar \"\$$DIR/vsopcompiler.jar\" \"\$$@\" " >> vsopc
-	chmod 755 vsopc vsopcompiler.jar
+	echo "java -jar \"\$$DIR/vsopcompilero.jar\" \"\$$@\" " >> vsopc
+	chmod 755 proguard.jar
+	java -jar proguard.jar -injars vsopcompiler.jar -outjars vsopcompilero.jar -libraryjars /usr/lib/jvm/java-8-oracle/jre/lib/rt.jar -keep class be.ac.ulg.vsop.Compiler {public static void main\(java.lang.String[]\)\;}
+	chmod 755 vsopc vsopcompilero.jar
 	rm -rf manifest
 	
 #Clean workspace
