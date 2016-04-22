@@ -17,9 +17,8 @@ public class Compiler {
     * @param args Arguments.
     */
 	public static void main(String[] args) {
-		int findex = (args.length > 1)? 1 : 0;
+		int findex = args.length - 1;
 		boolean ext = (findex == 1 && args[1].equals("-ext")) || ((args.length > 1) && args[0].equals("-ext"));
-		if(ext) findex++;
 		FileReader file = null;
 		
 		if(args.length < 1) {
