@@ -34,7 +34,12 @@ class Main extends IO {
             print("Here");
             printInt(xs.next().head());
             print("Here");
-            printInt(1).printInt(xs.next().head()).printInt(xs.length()).printInt(xs.next().length()) };
+            printInt(1).printInt(xs.next().head()).printInt(xs.length()).printInt(xs.next().length());
+            print("Length as dyn cast");
+            printInt(xs.length());
+            print("Length as static cast");
+            printInt(xs<List.length())
+         };
       print("Here at last");
       say2(1, "Hehe");
       say2(2);

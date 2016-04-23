@@ -275,6 +275,12 @@ public class Analyzer {
                         root.getChildren().get(2).getChildren().add(t.formals.getChildren().get(i).getChildren().get(2).clone());
                      }
                   }
+                  if(root.getProp("cast") != null && !Analyzer.isSameOrChild(ext, root.getChildren().get(0).getProp("type").toString(), root.getProp("cast").toString()))
+                     throw new Exception(root.getChildren().get(1).getProp("line") + ":" + root.getChildren().get(1).getProp("col") +
+                              ": semantics error cannot cast as callee as " + root.getProp("cast").toString());
+                  if(root.getProp("cast") != null && !prim.get(root.getProp("cast").toString()).containsKey(root.getChildren().get(1).getValue()))
+                     throw new Exception(root.getChildren().get(1).getProp("line") + ":" + root.getChildren().get(1).getProp("col") +
+                              ": semantics error the method " + root.getChildren().get(1).getValue() + " is not defined at the " + root.getProp("cast") + " level");
                } else {
                   if(((root.getChildren().size() == 2) != (t.formals == null)) || (root.getChildren().size() > 2 && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error wrong number of arguments to method " + root.getChildren().get(1).getValue());
@@ -544,7 +550,7 @@ public class Analyzer {
    }
    
    /**
-    * True if method override a non ocnformant one.
+    * True if method override a non conformant one.
     * @param root ASTNode where method is defined.
     * @param m Method name.
     * @param n Name of the class were defined.

@@ -83,7 +83,7 @@ public class Compiler {
             gen.emit(System.out, null, CGen.C);
             System.exit(0);
          }
-         gen.emit(System.out, args[findex].substring(0, args[findex].length() - 5), CGen.EXE);
+         gen.emit(System.out, args[findex].substring(0, args[findex].length() - (ext? 3 : 5)), CGen.EXE);
          System.out.println("Code generation completed !");
       } catch(Exception e) {
          e.printStackTrace();

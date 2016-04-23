@@ -787,8 +787,13 @@ public class CGen {
          switch(root.stype) {
             case "call":
                has = root.getChildren().size() > 2;
-               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + "->_vtable->" +
-                        root.getChildren().get(1).getValue().toString() + "(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ",");
+               //Do a dynamic dispatch if not required to use a static one
+               if(extd == false || root.getProp("cast") == null)
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + "->_vtable->" +
+                           root.getChildren().get(1).getValue().toString() + "(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ",");
+               else
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getProp("cast").toString() + "_" +
+                           root.getChildren().get(1).getValue().toString() + "(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ",");
                if(has) {
                   for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
                      sb.append(imapping.get(cname + "_" + mname).get(root.getChildren().get(2).getChildren().get(i)) + ",");
