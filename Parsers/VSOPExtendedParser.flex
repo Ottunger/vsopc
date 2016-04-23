@@ -134,6 +134,7 @@ DecIntegerLiteral = [0-9]+
    ">" { return symbol(SymbolValue.GREATER); }
    ">=" { return symbol(SymbolValue.GREATER_EQUAL); }
    "." { return symbol(SymbolValue.DOT); }
+   "@" { return symbol(SymbolValue.SWITCH); }
 
    /* comments */
    {EndOfLineComment} {  }

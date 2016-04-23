@@ -27,7 +27,7 @@ terminal Symbol LOWER, LOWER_EQUAL, ASSIGN, DOT;
 terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
-terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL; /* Newly defined 2 */
+terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL, SWITCH; /* Newly defined 2 */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
@@ -37,7 +37,7 @@ non terminal ASTNode block, block_full, expression, args, args_full;
 /* Precedences */
 precedence right ASSIGN;
 precedence left AND, OR;
-precedence right NOT;
+precedence right NOT, SWITCH;
 precedence nonassoc LOWER, LOWER_EQUAL, GREATER, GREATER_EQUAL, EQUAL;
 precedence left PLUS, MINUS;
 precedence left TIMES, DIV;
@@ -102,6 +102,7 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | LET OBJECT_IDENTIFIER:o COLON types:t may_assign:m IN expression:e {: RESULT = new ASTNode("let", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); RESULT.addChild(e); :}
              | OBJECT_IDENTIFIER:o assign:m {: RESULT = new ASTNode("assign", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); RESULT.addChild(m); :}
              | NOT expression:e {: RESULT = new ASTNode(SymbolValue.NOT, null); RESULT.addChild(e); :}
+             | SWITCH expression:e {: RESULT = new ASTNode(SymbolValue.SWITCH, null); RESULT.addChild(e); :}
              | expression:e EQUAL expression:f {: RESULT = new ASTNode(SymbolValue.EQUAL, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e LOWER expression:f {: RESULT = new ASTNode(SymbolValue.LOWER, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e LOWER_EQUAL expression:f {: RESULT = new ASTNode(SymbolValue.LOWER_EQUAL, null); RESULT.addChild(e); RESULT.addChild(f); :}

@@ -38,6 +38,7 @@ public class SymbolValue {
   public static final int error = 1;
   public static final int ISNULL = 12;
   public static final int NULL = 41;
+  public static final int SWITCH = 49;
   public static final int TIMES = 29;
   public static final int COLON = 24;
   public static final int UNIT_VALUE = 43;
@@ -106,7 +107,8 @@ public class SymbolValue {
   "GREATER_EQUAL",
   "OR",
   "FLOAT",
-  "FLOAT_LITERAL"
+  "FLOAT_LITERAL",
+  "SWITCH"
   };
 }
 

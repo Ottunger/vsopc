@@ -150,6 +150,12 @@ public class ASTNode implements Cloneable {
                System.out.print(")");
                if(all) System.out.print(" : " + getProp("type"));
                break;
+            case SymbolValue.SWITCH:
+               System.out.print("UnOp(@, ");
+               children.get(0).dump(all);
+               System.out.print(")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
             case SymbolValue.ISNULL:
                System.out.print("UnOp(isnull, ");
                children.get(0).dump(all);

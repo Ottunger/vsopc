@@ -23,7 +23,7 @@ class Cons extends List {
 class Main extends IO {
    say2(a : int32, b : string : "Hi") : int32 {
       printInt(a).print(b);
-      0
+      3
    }
    afloat() : float {
       2.2f ^ 2
@@ -48,6 +48,7 @@ class Main extends IO {
       say2(2);
       print("Getting a float");
       printFloat(afloat());
+      printFloat(@say2(3));
       0
    }
 }

@@ -360,6 +360,7 @@ public class CGen {
                itypes.put(cname + "_" + null, new HashMap<ASTNode, String>());
                break;
             case SymbolValue.NOT:
+            case SymbolValue.SWITCH:
             case SymbolValue.EQUAL:
             case SymbolValue.AND:
             case SymbolValue.OR:
@@ -706,6 +707,10 @@ public class CGen {
          switch(root.itype) {
             case SymbolValue.NOT:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = !" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
+               break;
+            case SymbolValue.SWITCH:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + (root.getProp("type").equals("int32")? "int" : "float")
+                        + ")" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
                break;
             case SymbolValue.EQUAL:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == (" +

@@ -201,6 +201,11 @@ public class Analyzer {
                if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '!' on this type");
                break;
+            case SymbolValue.SWITCH:
+               root.addProp("type", getNodeType(root, cname, 0, true).equals("int32")? "float" : "int32");
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can only switch between int32 and float");
+               break;
             case SymbolValue.EQUAL:
                root.addProp("type", "bool");
                meths = prim.get(getNodeType(root, cname, 0, true));
