@@ -27,6 +27,7 @@ terminal Symbol LOWER, LOWER_EQUAL, ASSIGN, DOT;
 terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
+terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL; /* Newly defined 2 */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
@@ -35,9 +36,9 @@ non terminal ASTNode block, block_full, expression, args, args_full;
 
 /* Precedences */
 precedence right ASSIGN;
-precedence left AND;
+precedence left AND, OR;
 precedence right NOT;
-precedence nonassoc LOWER, LOWER_EQUAL, EQUAL;
+precedence nonassoc LOWER, LOWER_EQUAL, GREATER, GREATER_EQUAL, EQUAL;
 precedence left PLUS, MINUS;
 precedence left TIMES, DIV;
 precedence left ISNULL;
@@ -54,8 +55,10 @@ types ::= BOOL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT 
         | UNIT:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.UNIT, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "unit"); :}
         | STRING:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); :}
         | INT32:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.INT32, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "int32"); :}
+        | FLOAT:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FLOAT, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "float"); :}
         | TYPE_IDENTIFIER:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.TYPE_IDENTIFIER, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", ASTNode.typeValue(RESULT)); :};
 lit ::= INTEGER_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.INTEGER_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "int32"); :}
+      | FLOAT_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FLOAT_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "float"); :}
       | STRING_LITERAL:t  {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); :}
       | TRUE:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.TRUE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "bool"); :}
       | FALSE:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FALSE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "bool"); :}
@@ -103,6 +106,9 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | expression:e LOWER expression:f {: RESULT = new ASTNode(SymbolValue.LOWER, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e LOWER_EQUAL expression:f {: RESULT = new ASTNode(SymbolValue.LOWER_EQUAL, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e AND expression:f {: RESULT = new ASTNode(SymbolValue.AND, null); RESULT.addChild(e); RESULT.addChild(f); :}
+             | expression:e GREATER expression:f {: RESULT = new ASTNode(SymbolValue.GREATER, null); RESULT.addChild(e); RESULT.addChild(f); :}
+             | expression:e GREATER_EQUAL expression:f {: RESULT = new ASTNode(SymbolValue.GREATER_EQUAL, null); RESULT.addChild(e); RESULT.addChild(f); :}
+             | expression:e OR expression:f {: RESULT = new ASTNode(SymbolValue.OR, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e PLUS expression:f {: RESULT = new ASTNode(SymbolValue.PLUS, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e MINUS expression:f {: RESULT = new ASTNode(SymbolValue.MINUS, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e TIMES expression:f {: RESULT = new ASTNode(SymbolValue.TIMES, null); RESULT.addChild(e); RESULT.addChild(f); :}

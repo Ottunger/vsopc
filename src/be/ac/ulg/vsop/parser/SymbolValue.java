@@ -14,11 +14,13 @@ public class SymbolValue {
   public static final int INT32 = 11;
   public static final int UNIT = 42;
   public static final int LOWER = 33;
+  public static final int GREATER = 44;
   public static final int MINUS = 28;
   public static final int NOT = 15;
   public static final int SEMICOLON = 25;
   public static final int AND = 2;
   public static final int RPAR = 23;
+  public static final int OR = 46;
   public static final int IN = 10;
   public static final int BOOL = 3;
   public static final int COMMA = 26;
@@ -30,6 +32,7 @@ public class SymbolValue {
   public static final int DOT = 36;
   public static final int EOF = 0;
   public static final int EQUAL = 32;
+  public static final int GREATER_EQUAL = 45;
   public static final int TRUE = 18;
   public static final int NEW = 14;
   public static final int error = 1;
@@ -41,6 +44,7 @@ public class SymbolValue {
   public static final int LBRACE = 20;
   public static final int ELSE = 6;
   public static final int WHILE = 19;
+  public static final int FLOAT = 47;
   public static final int LET = 13;
   public static final int THEN = 17;
   public static final int RBRACE = 21;
@@ -48,6 +52,7 @@ public class SymbolValue {
   public static final int EXTENDS = 7;
   public static final int LPAR = 22;
   public static final int STRING = 16;
+  public static final int FLOAT_LITERAL = 48;
   public static final int FALSE = 8;
   public static final int DO = 5;
   public static final int OBJECT_IDENTIFIER = 38;
@@ -96,7 +101,12 @@ public class SymbolValue {
   "STRING_LITERAL",
   "NULL",
   "UNIT",
-  "UNIT_VALUE"
+  "UNIT_VALUE",
+  "GREATER",
+  "GREATER_EQUAL",
+  "OR",
+  "FLOAT",
+  "FLOAT_LITERAL"
   };
 }
 

@@ -26,6 +26,7 @@ public class Analyzer {
       prim = new HashMap<String, HashMap<String, ScopeItem>>();
       ext.put("Object", Analyzer.EMPTY);
       ext.put("string", Analyzer.EMPTY);
+      ext.put("float", Analyzer.EMPTY);
       ext.put("int32", Analyzer.EMPTY);
       ext.put("bool", Analyzer.EMPTY);
       ext.put("unit", Analyzer.EMPTY);
@@ -34,6 +35,7 @@ public class Analyzer {
       //This table is only used at first to ensure basic knowledge of everything.
       prim.put("Object", new HashMap<String, ScopeItem>());
       prim.put("string", new HashMap<String, ScopeItem>());
+      prim.put("float", new HashMap<String, ScopeItem>());
       prim.put("int32", new HashMap<String, ScopeItem>());
       prim.put("bool", new HashMap<String, ScopeItem>());
       prim.put("unit", new HashMap<String, ScopeItem>());
@@ -55,6 +57,14 @@ public class Analyzer {
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
       prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3));
+      //Method printFloat
+      fms = new ASTNode("formals", "__dummy__");
+      tmp = new ASTNode("formal", "__dummy__");
+      tmp.addProp("type", "float");
+      fms.getChildren().add(0, tmp);
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "IO");
+      prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3));
    }
    
    /**
@@ -74,6 +84,7 @@ public class Analyzer {
       ScopeItem si;
       root.scope.put(ScopeItem.CLASS, "Object", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "Object"), 0));
       root.scope.put(ScopeItem.CLASS, "string", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "string"), 0));
+      root.scope.put(ScopeItem.CLASS, "float", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "float"), 0));
       root.scope.put(ScopeItem.CLASS, "int32", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "int32"), 0));
       root.scope.put(ScopeItem.CLASS, "bool", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "bool"), 0));
       root.scope.put(ScopeItem.CLASS, "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
@@ -198,26 +209,39 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '=' on different primitive types");
                break;
             case SymbolValue.AND:
-               root.addProp("type", "int32");
+            case SymbolValue.OR:
+               root.addProp("type", getNodeType(root, cname, 0, true));
                if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("bool"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and on something not int32 or bool");
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and/or on something not int32 or bool");
                if(!getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true)))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and on different types");
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and/or on different types");
                break;
             case SymbolValue.LOWER_EQUAL:
             case SymbolValue.LOWER:
+            case SymbolValue.GREATER_EQUAL:
+            case SymbolValue.GREATER:
                root.addProp("type", "bool");
-               if(!getNodeType(root, cname, 0, true).equals("int32") || !getNodeType(root, cname, 1, true).equals("int32"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on not both int32 types");
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary comparator on not both numeric types");
+               if(!getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true)))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary comparator on different types");
                break;
             case SymbolValue.PLUS:
             case SymbolValue.MINUS:
             case SymbolValue.TIMES:
             case SymbolValue.DIV:
+               root.addProp("type", getNodeType(root, cname, 0, true));
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on not both numeric types");
+               if(!getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true)))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on different types");
+               break;
             case SymbolValue.POW:
-               root.addProp("type", "int32");
-               if(!getNodeType(root, cname, 0, true).equals("int32") || !getNodeType(root, cname, 1, true).equals("int32"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on not both int32 types");
+               root.addProp("type", getNodeType(root, cname, 0, true));
+               if(!getNodeType(root, cname, 1, true).equals("int32"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error exponent should be int32");
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error exponed should be int32 or float");
                break;
             case SymbolValue.ISNULL:
                root.addProp("type", "bool");
@@ -505,10 +529,13 @@ public class Analyzer {
                if(ext.get(root.getChildren().get(0).getValue().toString()) != null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " has been defined several times");
                ext.put(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getValue().toString());
-               //Cannot extend built-in class String
+               //Cannot extend built-in classes, but wait, this will be forbidden by parser...
+               /*
                if(root.getChildren().get(1).getValue().toString().equals("string") || root.getChildren().get(1).getValue().toString().equals("int32") ||
-                        root.getChildren().get(1).getValue().toString().equals("bool") || root.getChildren().get(1).getValue().toString().equals("unit"))
+                        root.getChildren().get(1).getValue().toString().equals("bool") || root.getChildren().get(1).getValue().toString().equals("unit") ||
+                        root.getChildren().get(1).getValue().toString().equals("float"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " cannot extend built-in class or value");
+               */
                prim.put(root.getChildren().get(0).getValue().toString(), new HashMap<String, ScopeItem>());
                break;
             default:

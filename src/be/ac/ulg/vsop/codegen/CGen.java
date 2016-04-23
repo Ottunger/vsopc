@@ -60,6 +60,7 @@ public class CGen {
       classes = new HashSet<String>(ext.keySet());
       classes.remove("Object");
       classes.remove("string");
+      classes.remove("float");
       classes.remove("int32");
       classes.remove("bool");
       classes.remove("unit");
@@ -80,14 +81,17 @@ public class CGen {
       aft = sb.length();
       sb.append("int __pow(int a, int b); int __pow(int a, int b)"
                + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
+      sb.append("float __powf(float a, int b); float __powf(float a, int b)"
+               + "{if(b == 0) return 1.0f; if(b == 1) return a; float rec = __powf(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       //Define Object_struct. What did you expect?
       sb.append("typedef void Object_struct; ");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
-               + "IO_struct* IO_printInt(IO_struct*, int); struct IO_vtable {IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int);"
-               + "}; IO_vtable IO_static_vtable = {IO_print, IO_printInt}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;"
-               + "} IO_struct* IO_print(IO_struct* self, char* str) {puts(str); return self;} IO_struct* IO_printInt(IO_struct* self, int num) {"
-               + "printf(\"%d\\n\", num); return self;}");
+               + "IO_struct* IO_printInt(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); struct IO_vtable {IO_struct* (*print)(IO_struct*, char*);"
+               + "IO_struct* (*printInt)(IO_struct*, int); IO_struct* (*printFloat)(IO_struct*, float);}; IO_vtable IO_static_vtable = {IO_print, IO_printInt};"
+               + "IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self; } IO_struct* IO_print(IO_struct* self, char* str) {puts(str);"
+               + "return self;} IO_struct* IO_printInt(IO_struct* self, int num) {printf(\"%d\\n\", num); return self;}"
+               + "IO_struct* IO_printFloat(IO_struct* self, float num) {printf(\"%f\\n\", num); return self;}");
       
       //From a first pass, generate the structures that classes rely are
       genTypedefs(ast, true);
@@ -120,9 +124,9 @@ public class CGen {
          if(type == CGen.LLVM) {
             file = CGen.randomString();
             temp = new File(file).toPath();
-            pb = new ProcessBuilder("clang", "-x", "c", "-o", file, "-S", "-emit-llvm", "-I/usr/local/gc/include", "-");
+            pb = new ProcessBuilder("clang", "-x", "c", "-Oz", "-o", file, "-S", "-emit-llvm", "-I/usr/local/gc/include", "-");
          } else
-            pb = new ProcessBuilder("clang", "-x", "c", "-O3", "-o", file, "-I/usr/local/gc/include", "-static", "-", "-L/usr/local/gc/lib", "-lgc");
+            pb = new ProcessBuilder("clang", "-x", "c", "-Ofast", "-o", file, "-I/usr/local/gc/include", "-static", "-", "-L/usr/local/gc/lib", "-lgc");
          pb.redirectError(new File("/dev/null"));
          pb.redirectOutput(new File("/dev/null"));
          p = pb.start();
@@ -244,7 +248,8 @@ public class CGen {
                   sb.append("struct " + type + "_vtable {");
                   //Add IO methods if derived from it
                   if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_struct* (*print)(" + type + "_struct*, char*); IO_struct* (*printInt)(" + type + "_struct*, int);");
+                     sb.append("IO_struct* (*print)(" + type + "_struct*, char*); IO_struct* (*printInt)(" + type + "_struct*, int);"
+                              + "IO_struct* (*printFloat)(" + type + "_struct*, float);");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      sb.append(sigs.get(i).ret + " (*" + methods.get(i) + ")(");
@@ -260,7 +265,7 @@ public class CGen {
                   sb.append(type + "_vtable " + type + "_static_vtable = {");
                   //Add IO methods if derived from it
                   if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_print, IO_printInt,");
+                     sb.append("IO_print,IO_printInt,IO_printFloat,");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      do {
@@ -357,8 +362,11 @@ public class CGen {
             case SymbolValue.NOT:
             case SymbolValue.EQUAL:
             case SymbolValue.AND:
+            case SymbolValue.OR:
             case SymbolValue.LOWER_EQUAL:
             case SymbolValue.LOWER:
+            case SymbolValue.GREATER_EQUAL:
+            case SymbolValue.GREATER:
             case SymbolValue.PLUS:
             case SymbolValue.MINUS:
             case SymbolValue.TIMES:
@@ -368,6 +376,7 @@ public class CGen {
             case SymbolValue.NEW:
             case SymbolValue.ASSIGN:
             case SymbolValue.INTEGER_LITERAL:
+            case SymbolValue.FLOAT_LITERAL:
             case SymbolValue.STRING_LITERAL:
             case SymbolValue.FALSE:
             case SymbolValue.TRUE:
@@ -426,6 +435,8 @@ public class CGen {
       switch(type) {
          case "int32":
             return "int";
+         case "float":
+            return "float";
          case "bool":
             return "char";
          case "string":
@@ -496,6 +507,9 @@ public class CGen {
       switch(type) {
          case "int32":
             sb.append("int " + fname + "; ");
+            break;
+         case "float":
+            sb.append("float " + fname + "; ");
             break;
          case "bool":
             sb.append("char " + fname + "; ");
@@ -603,6 +617,8 @@ public class CGen {
       switch (type) {
          case "int32":
             return field + " = 0; ";
+         case "float":
+            return field + " = 0.0f; ";
          case "bool":
             return field + " = 0; ";
          case "string":
@@ -699,12 +715,24 @@ public class CGen {
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") & (" +
                         imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
+            case SymbolValue.OR:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") | (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               break;
             case SymbolValue.LOWER_EQUAL:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") <= (" +
                         imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.LOWER:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") < (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               break;
+            case SymbolValue.GREATER_EQUAL:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") >= (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               break;
+            case SymbolValue.GREATER:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") > (" +
                         imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.PLUS:
@@ -724,8 +752,13 @@ public class CGen {
                         imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.POW:
-               sb.append(imapping.get(cname + "_" + mname).get(root) + " = __pow((" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + "), (" +
-                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + "));");
+               if(root.getProp("type").equals("int32"))
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = __pow((" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + "), (" +
+                           imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + "));");
+               else
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = __powf((" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + "), (" +
+                           imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + "));");
+               break;
             case SymbolValue.ISNULL:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == 0;");
                break;
@@ -737,6 +770,9 @@ public class CGen {
                break;
             case SymbolValue.INTEGER_LITERAL:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + (int)root.getValue() + ";");
+               break;
+            case SymbolValue.FLOAT_LITERAL:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + (float)root.getValue() + ";");
                break;
             case SymbolValue.STRING_LITERAL:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + regName(root.getValue().toString()) + ";");
@@ -773,6 +809,7 @@ public class CGen {
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
                break;
             case SymbolValue.INT32:
+            case SymbolValue.FLOAT:
             case SymbolValue.STRING:
             case SymbolValue.BOOL:
             case SymbolValue.UNIT:

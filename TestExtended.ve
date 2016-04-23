@@ -25,6 +25,9 @@ class Main extends IO {
       printInt(a).print(b);
       0
    }
+   afloat() : float {
+      2.2f ^ 2
+   }
    main() : int32 {
       let s : int32 <- 4 in
          let xs : Cons <- (new Cons).init(0, (new Cons).init(1, (new Cons).init(2, new Nil))) in {
@@ -43,6 +46,8 @@ class Main extends IO {
       print("Here at last");
       say2(1, "Hehe");
       say2(2);
+      print("Getting a float");
+      printFloat(afloat());
       0
    }
 }

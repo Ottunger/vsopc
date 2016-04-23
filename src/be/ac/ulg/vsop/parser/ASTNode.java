@@ -180,6 +180,30 @@ public class ASTNode implements Cloneable {
                System.out.print(")");
                if(all) System.out.print(" : " + getProp("type"));
                break;
+            case SymbolValue.OR:
+               System.out.print("BinOp(or, ");
+               children.get(0).dump(all);
+               System.out.print(", ");
+               children.get(1).dump(all);
+               System.out.print(")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
+            case SymbolValue.GREATER:
+               System.out.print("BinOp(>, ");
+               children.get(0).dump(all);
+               System.out.print(", ");
+               children.get(1).dump(all);
+               System.out.print(")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
+            case SymbolValue.GREATER_EQUAL:
+               System.out.print("BinOp(>=, ");
+               children.get(0).dump(all);
+               System.out.print(", ");
+               children.get(1).dump(all);
+               System.out.print(")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
             case SymbolValue.LOWER:
                System.out.print("BinOp(<, ");
                children.get(0).dump(all);
@@ -231,6 +255,7 @@ public class ASTNode implements Cloneable {
             case SymbolValue.OBJECT_IDENTIFIER:
             case SymbolValue.STRING_LITERAL:
             case SymbolValue.INTEGER_LITERAL:
+            case SymbolValue.FLOAT_LITERAL:
                System.out.print(value);
                if(all) System.out.print(" : " + getProp("type"));
                break;

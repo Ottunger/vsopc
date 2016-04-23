@@ -7,7 +7,7 @@ public class Symbol extends java_cup.runtime.ComplexSymbolFactory.ComplexSymbol 
 	public static final String NAMES[] = {"", "", "and", "bool", "class", "do", "else", "extends", "false", "if", "in", "int32", "isnull",
 		"let", "new", "not", "string", "then", "true", "while", "lbrace", "rbrace", "lpar", "rpar", "colon", "semicolon", "comma", "plus",
 		"minus", "times", "div", "pow", "equal", "lower", "lower-equal", "assign", "dot", "integer-literal", "object-identifier", "type-identifier",
-		"string-literal", "null", "unit", "unit-value"};
+		"string-literal", "null", "unit", "unit-value", "greater", "greater-equal", "or", "float", "float-literal"};
    public int line, col;
    public Object val;
 	
@@ -62,6 +62,21 @@ public class Symbol extends java_cup.runtime.ComplexSymbolFactory.ComplexSymbol 
 		this.val = new Integer(val);
 		this.value = this;
 	}
+	
+	/**
+    * Creates a symbol.
+    * @param type Type.
+    * @param line Line.
+    * @param col Column.
+    * @param val Value.
+    */
+   public Symbol(int type, int line, int col, float val) {
+      super(Symbol.NAMES[type], type);
+      this.line = line;
+      this.col = this.left = col;
+      this.val = new Float(val);
+      this.value = this;
+   }
 	
 	/**
 	 * Returns true if the type has a String value.

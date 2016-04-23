@@ -4,7 +4,7 @@ import be.ac.ulg.vsop.parser.SymbolValue;
 import java.util.Stack;
 %%
 
-%class VSOPParser
+%class VSOPExtendedParser
 %type Symbol
 %unicode
 %line
@@ -28,6 +28,12 @@ import java.util.Stack;
       return new Symbol(type, yyline + 1, yycolumn + 1, value);
    }
    public Symbol symbol(int type, int value, int y, int x) {
+      return new Symbol(type, y + 1, x + 1, value);
+   }
+   public Symbol symbol(int type, float value) {
+      return new Symbol(type, yyline + 1, yycolumn + 1, value);
+   }
+   public Symbol symbol(int type, float value, int y, int x) {
       return new Symbol(type, y + 1, x + 1, value);
    }
    public String toPoint(int pt) {
@@ -94,6 +100,8 @@ DecIntegerLiteral = [0-9]+
    "while"/{AfterToken} { return symbol(SymbolValue.WHILE); }
    "null"/{AfterToken} { return symbol(SymbolValue.NULL); }
    "unit"/{AfterToken} { return symbol(SymbolValue.UNIT); }
+   "or"/{AfterToken} { return symbol(SymbolValue.OR); }
+   "float"/{AfterToken} { return symbol(SymbolValue.FLOAT); }
    
    /* identifiers */ 
    {Identifier}/{AfterToken} { return symbol(SymbolValue.OBJECT_IDENTIFIER, yytext()); }
@@ -103,6 +111,7 @@ DecIntegerLiteral = [0-9]+
    "0x" { cbegin = yycolumn; rbegin = yyline; yybegin(HEX); }
    "0b" { cbegin = yycolumn; rbegin = yyline; yybegin(BIN); }
    {DecIntegerLiteral}/{AfterDigit} { return symbol(SymbolValue.INTEGER_LITERAL, Integer.parseInt(yytext())); }
+   {DecIntegerLiteral}"."{DecIntegerLiteral}"f"/{AfterDigit} { return symbol(SymbolValue.FLOAT_LITERAL, Float.parseFloat(yytext())); }
    \" { cbegin = yycolumn; rbegin = yyline; string.setLength(0); yybegin(STRING); string.append('"'); }
 
    /* operators */
@@ -122,7 +131,8 @@ DecIntegerLiteral = [0-9]+
    "<" { return symbol(SymbolValue.LOWER); }
    "<=" { return symbol(SymbolValue.LOWER_EQUAL); }
    "<-" { return symbol(SymbolValue.ASSIGN); }
-   /* forgotten one? */
+   ">" { return symbol(SymbolValue.GREATER); }
+   ">=" { return symbol(SymbolValue.GREATER_EQUAL); }
    "." { return symbol(SymbolValue.DOT); }
 
    /* comments */
