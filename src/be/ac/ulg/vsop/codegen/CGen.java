@@ -417,6 +417,7 @@ public class CGen {
             case "let":
             case "uminus":
             case "fieldget":
+            case "cast":
                imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
                itypes.get(cname + "_" + mname).put(root, CGen.localType(root.getProp("type").toString()));
                break;
@@ -860,6 +861,10 @@ public class CGen {
                }
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ")->"
                         + root.getChildren().get(1).getValue().toString() + drf + ";");
+               break;
+            case "cast":
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + root.getProp("type") + "_struct*"
+                        + ")" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
                break;
             case "call":
                has = root.getChildren().size() > 2;

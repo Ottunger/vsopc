@@ -17,6 +17,7 @@ public class SymbolValue {
   public static final int LOWER = 33;
   public static final int GREATER = 44;
   public static final int MINUS = 28;
+  public static final int TILDE = 52;
   public static final int NOT = 15;
   public static final int SEMICOLON = 25;
   public static final int AND = 2;
@@ -112,7 +113,8 @@ public class SymbolValue {
   "FLOAT_LITERAL",
   "SWITCH",
   "LBRK",
-  "RBRK"
+  "RBRK",
+  "TILDE"
   };
 }
 

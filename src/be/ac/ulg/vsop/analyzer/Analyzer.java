@@ -50,7 +50,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
-      prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, true));
+      prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printInt
       fms = new ASTNode("formals", "__dummy__");
       tmp = new ASTNode("formal", "__dummy__");
@@ -58,7 +58,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
-      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, true));
+      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printFloat
       fms = new ASTNode("formals", "__dummy__");
       tmp = new ASTNode("formal", "__dummy__");
@@ -66,7 +66,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
-      prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, true));
+      prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
    }
    
    /**
@@ -100,7 +100,7 @@ public class Analyzer {
          throw new Exception("1:1: semantics error no Main class");
       if((si = si.userType.scope.get(ScopeItem.METHOD, "main")) == null)
          throw new Exception("1:1: semantics error no main method");
-      if(si.formals != null || !getNodeType(si.userType, "Main", -1, false).equals("int32") || si.sh == false)
+      if(si.formals != null || !getNodeType(si.userType, "Main", -1, false).equals("int32") || si.sh != ScopeItem.PUBLIC)
          throw new Exception("1:1: semantics error bad main signature, should be \"+main() : int32\"");
       //Check types
       checkTypes(root, null, root.scope);
@@ -293,10 +293,20 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error no field " + root.getChildren().get(1).getValue().toString()
                            + " in class (or type?) " + root.getChildren().get(0).getProp("type").toString());
                root.addProp("type", type);
-               if(cname != root.getChildren().get(0).getProp("type").toString() &&
-                        Analyzer.findFieldAbove(ext, root.getChildren().get(1), root.getChildren().get(0).getProp("type").toString()).sh == false)
+               if(!cname.equals(root.getChildren().get(0).getProp("type").toString()) &&
+                        Analyzer.findFieldAbove(ext, root.getChildren().get(1), root.getChildren().get(0).getProp("type").toString()).sh == ScopeItem.PRIVATE)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error field " +
                            root.getChildren().get(1).getValue().toString() + " is private");
+               else if(!Analyzer.isSameOrChild(ext, cname, root.getChildren().get(0).getProp("type").toString()) &&
+                        Analyzer.findFieldAbove(ext, root.getChildren().get(1), root.getChildren().get(0).getProp("type").toString()).sh == ScopeItem.PROTECTED)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error field " +
+                           root.getChildren().get(1).getValue().toString() + " is protected");
+               break;
+            case "cast":
+               root.addProp("type", root.getProp("cast"));
+               if(!Analyzer.isSameOrChild(ext, root.getChildren().get(0).getProp("type").toString(), root.getProp("type").toString()) &&
+                        !Analyzer.isSameOrChild(ext, root.getProp("type").toString(), root.getChildren().get(0).getProp("type").toString()))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot cast to neither extended nor extension class");
                break;
             case "call":
                type = getNodeType(root, cname, 0, true);
@@ -315,9 +325,9 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call method " +
                            root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, cname, 0, true));
                //If extended and private method...
-               if(extd && !type.equals(cname) && t.sh == false)
+               if(extd && ((!type.equals(cname) && t.sh == ScopeItem.PRIVATE) || (!Analyzer.isSameOrChild(ext, cname, type) && t.sh == ScopeItem.PROTECTED)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method " +
-                           root.getChildren().get(1).getValue().toString() + " is private");
+                           root.getChildren().get(1).getValue().toString() + " is not accessible from this class");
                //Then our type is the one of the method
                root.addProp("type", getNodeType(t.userType, cname, -1, false));
                //Check ok arguments in both modes
@@ -504,7 +514,7 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown super class " + root.getChildren().get(1).getValue().toString());
                root.getChildren().get(0).addProp("type", root.getChildren().get(0).getValue().toString());
                //Put "self" everywhere in this class
-               root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1, false));
+               root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1, ScopeItem.PRIVATE));
                //Check for extends-loop
                if(Analyzer.isSameOrChild(ext, root.getChildren().get(1).getValue().toString(), root.getChildren().get(0).getValue().toString()))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " defines an extends-loop");
@@ -573,7 +583,7 @@ public class Analyzer {
             switch(root.stype) {
                case "formal":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, false), 2);
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, ScopeItem.PRIVATE), 2);
                   //Register the type because this is not acquired bottom-up while cross checking
                   root.addProp("type", getNodeType(root, cname, 1, false));
                   if(ext.get(getNodeType(root, cname, 1, false)) == null)
@@ -584,11 +594,11 @@ public class Analyzer {
                case "field":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
                            new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level,
-                                    ((Symbol)root.getProp("visi")).sym == SymbolValue.PLUS), 1);
+                                    ScopeItem.fromSymbol((Symbol)root.getProp("visi"))), 1);
                   break;
                case "let":
                   root.scope.put(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, false));
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, ScopeItem.PRIVATE));
                   if(root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
                            ext.get(root.getChildren().get(1).getValue().toString()) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " +
@@ -654,7 +664,7 @@ public class Analyzer {
          si = new ScopeItem(ScopeItem.METHOD,
                has? root.getChildren().get(2).itype : root.getChildren().get(1).itype,
                has? root.getChildren().get(2) : root.getChildren().get(1),
-               has? root.getChildren().get(1) : null, 3, ((Symbol)root.getProp("visi")).sym == SymbolValue.PLUS);
+               has? root.getChildren().get(1) : null, 3, ScopeItem.fromSymbol((Symbol)root.getProp("visi")));
          meths.put(root.getChildren().get(0).getValue().toString(), si);
       }
    }

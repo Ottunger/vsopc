@@ -28,7 +28,7 @@ terminal Symbol LOWER, LOWER_EQUAL, ASSIGN, DOT;
 terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
-terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL, SWITCH, LBRK, RBRK; /* Newly defined as ext */
+terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL, SWITCH, LBRK, RBRK, TILDE; /* Extensions */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
@@ -68,7 +68,8 @@ types ::= simtypes:s {: RESULT = s; :}
 deref ::= LBRK INTEGER_LITERAL:t RBRK {: RESULT = new Stack<Integer>(); RESULT.push((Integer) t.val); :}
         | LBRK INTEGER_LITERAL:t RBRK deref:d {: RESULT = d; d.push((Integer) t.val); :};
 visi ::= PLUS:p {: RESULT = p; :}
-       | MINUS:p {: RESULT = p; :};
+       | MINUS:p {: RESULT = p; :}
+       | TILDE:p {: RESULT = p; :};
         
 lit ::= INTEGER_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.INTEGER_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "int32"); :}
       | FLOAT_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FLOAT_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "float"); :}
@@ -143,6 +144,7 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | OBJECT_IDENTIFIER:o deref:d {: RESULT = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); RESULT.addProp("line", o.line + ""); RESULT.addProp("col", o.col + ""); RESULT.addProp("deref", d); :}
              | expression:e DOT OBJECT_IDENTIFIER:o {: RESULT = new ASTNode("fieldget", null); ASTNode c2 = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); c2.addProp("line", o.line + ""); c2.addProp("col", o.col + ""); RESULT.addProp("line", e.getProp("line")); RESULT.addProp("col", e.getProp("col")); RESULT.addChild(e); RESULT.addChild(c2); :}
              | expression:e DOT OBJECT_IDENTIFIER:o deref:d {: RESULT = new ASTNode("fieldget", null); ASTNode c2 = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); c2.addProp("line", o.line + ""); c2.addProp("col", o.col + ""); RESULT.addProp("line", e.getProp("line")); RESULT.addProp("col", e.getProp("col")); RESULT.addChild(e); RESULT.addChild(c2); RESULT.addProp("deref", d); :}
+             | expression:e LOWER TYPE_IDENTIFIER:c GREATER {: RESULT = new ASTNode("cast", null); RESULT.addChild(e); RESULT.addProp("cast", c.val); RESULT.addProp("col", e.getProp("col")); RESULT.addProp("line", e.getProp("line")); :} 
              | lit:l {: RESULT = l; :}
              | LPAR:t RPAR {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.UNIT_VALUE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "unit"); :}
              | LPAR expression:e RPAR {: RESULT = e; :}

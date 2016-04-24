@@ -1,6 +1,8 @@
 package be.ac.ulg.vsop.analyzer;
 
+import be.ac.ulg.vsop.lexer.Symbol;
 import be.ac.ulg.vsop.parser.ASTNode;
+import be.ac.ulg.vsop.parser.SymbolValue;
 
 
 public class ScopeItem {
@@ -10,8 +12,11 @@ public class ScopeItem {
    public static final int CLASS = 2;
    public static final int CTYPE = 5;
    public static final int VOID = -1;
+   public static final char PUBLIC = 0;
+   public static final char PROTECTED = 1;
+   public static final char PRIVATE = 2;
    
-   public boolean sh;
+   public char sh;
    public int type, stype, level;
    public ASTNode userType, formals;
    
@@ -27,7 +32,7 @@ public class ScopeItem {
       this.level = level;
       this.userType = userType;
       this.formals = null;
-      this.sh = true;
+      this.sh = ScopeItem.PUBLIC;
    }
    
    /**
@@ -38,7 +43,7 @@ public class ScopeItem {
     * @param level Level at which was reg'd.
     * @param sh Is public.
     */
-   public ScopeItem(int type, int stype, ASTNode userType, int level, boolean sh) {
+   public ScopeItem(int type, int stype, ASTNode userType, int level, char sh) {
       this.type = type;
       this.stype = stype;
       this.level = level;
@@ -56,13 +61,26 @@ public class ScopeItem {
     * @param level Level at which was reg'd.
     * @param sh Is public.
     */
-   public ScopeItem(int type, int stype, ASTNode userType, ASTNode formals, int level, boolean sh) {
+   public ScopeItem(int type, int stype, ASTNode userType, ASTNode formals, int level, char sh) {
       this.type = type;
       this.stype = stype;
       this.level = level;
       this.userType = userType;
       this.formals = formals;
       this.sh = sh;
+   }
+
+   public static char fromSymbol(Symbol prop) {
+      switch(prop.sym) {
+         case SymbolValue.PLUS:
+            return ScopeItem.PUBLIC;
+         case SymbolValue.MINUS:
+            return ScopeItem.PRIVATE;
+         case SymbolValue.TILDE:
+            return ScopeItem.PROTECTED;
+         default:
+            return ScopeItem.PUBLIC;
+      }
    }
 
 }

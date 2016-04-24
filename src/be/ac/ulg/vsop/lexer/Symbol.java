@@ -7,7 +7,7 @@ public class Symbol extends java_cup.runtime.ComplexSymbolFactory.ComplexSymbol 
 	public static final String NAMES[] = {"", "", "and", "bool", "class", "do", "else", "extends", "false", "if", "in", "int32", "isnull",
 		"let", "new", "not", "string", "then", "true", "while", "lbrace", "rbrace", "lpar", "rpar", "colon", "semicolon", "comma", "plus",
 		"minus", "times", "div", "pow", "equal", "lower", "lower-equal", "assign", "dot", "integer-literal", "object-identifier", "type-identifier",
-		"string-literal", "null", "unit", "unit-value", "greater", "greater-equal", "or", "float", "float-literal", "switch", "lbrk", "rbrk"};
+		"string-literal", "null", "unit", "unit-value", "greater", "greater-equal", "or", "float", "float-literal", "switch", "lbrk", "rbrk", "tilde"};
    public int line, col;
    public Object val;
 	

@@ -37,7 +37,7 @@ class Main extends IO {
       printInt(a).print(b);
       3
    }
-   -afloat() : float {
+   ~afloat() : float {
       2.2f ^ 2
    }
    +main() : int32 {
@@ -55,7 +55,12 @@ class Main extends IO {
             print("Length as dyn cast");
             printInt(xs.length());
             print("Length as static cast");
-            printInt(xs<List.length())
+            printInt(xs<List.length());
+            let xl : List <- xs in {
+               let xl2 : Cons <- xl<Cons> in {
+                  print("Got back my instance")
+               }
+            }
          };
       print("Here at last");
       say2(1, "Hehe");

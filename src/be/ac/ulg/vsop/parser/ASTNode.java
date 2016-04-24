@@ -391,6 +391,12 @@ public class ASTNode implements Cloneable {
                System.out.print(")");
                if(all) System.out.print(" : " + getProp("type"));
                break;
+            case "cast":
+               System.out.print("Cast(");
+               children.get(0).dump(all);
+               System.out.print(", " + getProp("cast").toString() + ")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
             case "uminus":
                System.out.print("UnOp(-, ");
                children.get(0).dump(all);

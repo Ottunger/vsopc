@@ -66,7 +66,7 @@ LineTerminator = \r\n|\n
 White = [ \t\f\r]
 WhiteSpace = {LineTerminator} | {White}
 EndOfLineComment = "//" [^\n]* {LineTerminator}?
-Operators = [\ {\ } \( \) : ; , \+ - \* \/ \^ = \< \. \> \[ \] @]
+Operators = [\ {\ } \( \) : ; , \+ - \* \/ \^ = \< \. \> \[ \] @ \~]
 AfterToken = {WhiteSpace} | {Operators}
 AfterDigit = {AfterToken} | [_a-zA-Z]
 
@@ -137,6 +137,7 @@ DecIntegerLiteral = [0-9]+
    "@" { return symbol(SymbolValue.SWITCH); }
    "[" { return symbol(SymbolValue.LBRK); }
    "]" { return symbol(SymbolValue.RBRK); }
+   "~" { return symbol(SymbolValue.TILDE); }
 
    /* comments */
    {EndOfLineComment} {  }
