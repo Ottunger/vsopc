@@ -8,6 +8,7 @@ package be.ac.ulg.vsop.parser;
 /** CUP generated class containing symbol constants. */
 public class SymbolValue {
   /* terminals */
+  public static final int LBRK = 50;
   public static final int TYPE_IDENTIFIER = 39;
   public static final int POW = 31;
   public static final int STRING_LITERAL = 40;
@@ -30,6 +31,7 @@ public class SymbolValue {
   public static final int ASSIGN = 35;
   public static final int IF = 9;
   public static final int DOT = 36;
+  public static final int RBRK = 51;
   public static final int EOF = 0;
   public static final int EQUAL = 32;
   public static final int GREATER_EQUAL = 45;
@@ -108,7 +110,9 @@ public class SymbolValue {
   "OR",
   "FLOAT",
   "FLOAT_LITERAL",
-  "SWITCH"
+  "SWITCH",
+  "LBRK",
+  "RBRK"
   };
 }
 

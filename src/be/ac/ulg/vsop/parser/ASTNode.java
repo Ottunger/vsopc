@@ -90,6 +90,14 @@ public class ASTNode implements Cloneable {
    }
    
    /**
+    * Set the registered value.
+    * @param value Value.
+    */
+   public void setValue(Object o) {
+      value = o;
+   }
+   
+   /**
     * Get the registered value.
     * @return Value.
     */
@@ -259,6 +267,9 @@ public class ASTNode implements Cloneable {
                if(all) System.out.print(" : " + getProp("type"));
                break;
             case SymbolValue.OBJECT_IDENTIFIER:
+               System.out.print(value);
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
             case SymbolValue.STRING_LITERAL:
             case SymbolValue.INTEGER_LITERAL:
             case SymbolValue.FLOAT_LITERAL:

@@ -1,6 +1,7 @@
 /* VSOP Parser */
 package be.ac.ulg.vsop.parser;
 
+import java.util.Stack;
 import java_cup.runtime.*;
 import be.ac.ulg.vsop.lexer.Symbol;
 import be.ac.ulg.vsop.parser.SymbolValue;
@@ -27,14 +28,16 @@ terminal Symbol LOWER, LOWER_EQUAL, ASSIGN, DOT;
 terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
-terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL, SWITCH; /* Newly defined 2 */
+terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL, SWITCH, LBRK, RBRK; /* Newly defined as ext */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
 non terminal ASTNode field, may_assign, assign, method, formals, formals_full, formal;
-non terminal ASTNode block, block_full, expression, args, args_full;
+non terminal ASTNode block, block_full, expression, args, args_full, simtypes;
+non terminal Stack<Integer> deref;   
 
 /* Precedences */
+precedence nonassoc LBRK, RBRK;
 precedence right ASSIGN;
 precedence left AND, OR;
 precedence right NOT, SWITCH;
@@ -51,12 +54,19 @@ precedence nonassoc LBRACE, RBRACE;
 start with program;
 
 /* The grammar */
-types ::= BOOL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.BOOL, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "bool"); :}
+simtypes ::= BOOL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.BOOL, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "bool"); :}
         | UNIT:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.UNIT, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "unit"); :}
         | STRING:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); :}
         | INT32:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.INT32, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "int32"); :}
         | FLOAT:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FLOAT, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "float"); :}
         | TYPE_IDENTIFIER:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.TYPE_IDENTIFIER, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", ASTNode.typeValue(RESULT)); :};
+        
+types ::= simtypes:s {: RESULT = s; :}
+        | simtypes:s LBRK RBRK {: RESULT = s; s.itype = SymbolValue.TYPE_IDENTIFIER; String st = RESULT.getProp("type").toString(); RESULT.addProp("type", "[]:" + st); s.setValue("[]:" + st); :}
+        | types:s LBRK RBRK {: RESULT = s; String st = RESULT.getProp("type").toString(); RESULT.addProp("type", "[]:" + st); s.setValue("[]:" + st); :};
+deref ::= LBRK INTEGER_LITERAL:t RBRK {: RESULT = new Stack<Integer>(); RESULT.push((Integer) t.val); :}
+        | LBRK INTEGER_LITERAL:t RBRK deref:d {: RESULT = d; d.push((Integer) t.val); :};
+        
 lit ::= INTEGER_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.INTEGER_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "int32"); :}
       | FLOAT_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FLOAT_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "float"); :}
       | STRING_LITERAL:t  {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); :}
@@ -100,6 +110,7 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | IF expression:e THEN expression:f ELSE expression:g {: RESULT = new ASTNode("if", null); RESULT.addChild(e); RESULT.addChild(f); RESULT.addChild(g); :}
              | WHILE expression:e DO expression:f {: RESULT = new ASTNode("while", null); RESULT.addChild(e); RESULT.addChild(f); :}
              | LET OBJECT_IDENTIFIER:o COLON types:t may_assign:m IN expression:e {: RESULT = new ASTNode("let", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); RESULT.addChild(e); :}
+             | OBJECT_IDENTIFIER:o deref:d assign:m {: RESULT = new ASTNode("assign", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); RESULT.addChild(m); RESULT.addProp("deref", d); :}
              | OBJECT_IDENTIFIER:o assign:m {: RESULT = new ASTNode("assign", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); RESULT.addChild(m); :}
              | NOT expression:e {: RESULT = new ASTNode(SymbolValue.NOT, null); RESULT.addChild(e); :}
              | SWITCH expression:e {: RESULT = new ASTNode(SymbolValue.SWITCH, null); RESULT.addChild(e); :}
@@ -120,8 +131,11 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | OBJECT_IDENTIFIER:o LPAR args:m RPAR {: RESULT = new ASTNode("call", null); ASTNode b = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "self"); b.addProp("line", o.line + ""); b.addProp("col", o.col + ""); RESULT.addChild(b); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); if(m != null) RESULT.addChild(m); :}
              | expression:e DOT OBJECT_IDENTIFIER:o LPAR args:m RPAR {: RESULT = new ASTNode("call", null); RESULT.addChild(e); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); if(m != null) RESULT.addChild(m); :}
              | expression:e LOWER TYPE_IDENTIFIER:c DOT OBJECT_IDENTIFIER:o LPAR args:m RPAR {: RESULT = new ASTNode("call", null); RESULT.addChild(e); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); if(m != null) RESULT.addChild(m); RESULT.addProp("cast", c.val); :}
-             | NEW TYPE_IDENTIFIER:t {: RESULT = new ASTNode(SymbolValue.NEW, null); ASTNode a = new ASTNode(SymbolValue.TYPE_IDENTIFIER, t.val); a.addProp("line", t.line + ""); a.addProp("col", t.col + ""); RESULT.addChild(a); :}
+             | NEW types:t deref:d {: RESULT = new ASTNode(SymbolValue.NEW, null); RESULT.addChild(t); RESULT.addProp("deref", d); :}
+             | NEW simtypes:t deref:d {: RESULT = new ASTNode(SymbolValue.NEW, null); RESULT.addChild(t); RESULT.addProp("deref", d); :}
+             | NEW simtypes:t {: RESULT = new ASTNode(SymbolValue.NEW, null); RESULT.addChild(t); :}
              | OBJECT_IDENTIFIER:o {: RESULT = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); RESULT.addProp("line", o.line + ""); RESULT.addProp("col", o.col + ""); :}
+             | OBJECT_IDENTIFIER:o deref:d {: RESULT = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); RESULT.addProp("line", o.line + ""); RESULT.addProp("col", o.col + ""); RESULT.addProp("deref", d); :}
              | lit:l {: RESULT = l; :}
              | LPAR:t RPAR {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.UNIT_VALUE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "unit"); :}
              | LPAR expression:e RPAR {: RESULT = e; :}

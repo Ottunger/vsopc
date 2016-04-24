@@ -433,20 +433,25 @@ public class CGen {
     * @return C type.
     */
    private static String localType(String type) {
-      switch(type) {
+      String stars = "";
+      String tps[] = type.split(":");
+      for(int i = 1; i < tps.length; i++)
+         stars += "*";
+
+      switch(tps[tps.length - 1]) {
          case "int32":
-            return "int";
+            return "int" + stars;
          case "float":
-            return "float";
+            return "float" + stars;
          case "bool":
-            return "char";
+            return "char" + stars;
          case "string":
-            return "char*";
+            return "char*" + stars;
          case "unit":
-            return "char";
+            return "char" + stars;
          default:
             //Is a pointer
-            return type + "_struct*";
+            return tps[tps.length - 1] + "_struct*" + stars;
       }
    }
    
@@ -505,25 +510,30 @@ public class CGen {
     * @param type Our kind of type.
     */
    private void cType(String fname, String type) {
-      switch(type) {
+      String stars = "";
+      String tps[] = type.split(":");
+      for(int i = 1; i < tps.length; i++)
+         stars += "*";
+      
+      switch(tps[tps.length - 1]) {
          case "int32":
-            sb.append("int " + fname + "; ");
+            sb.append("int" + stars + " " + fname + "; ");
             break;
          case "float":
-            sb.append("float " + fname + "; ");
+            sb.append("float" + stars + " " + fname + "; ");
             break;
          case "bool":
-            sb.append("char " + fname + "; ");
+            sb.append("char" + stars + " " + fname + "; ");
             break;
          case "string":
-            sb.append("char* " + fname + "; ");
+            sb.append("char*" + stars + " " + fname + "; ");
             break;
          case "unit":
-            sb.append("char " + fname + "; ");
+            sb.append("char" + stars + " " + fname + "; ");
             break;
          default:
             //Is a pointer
-            sb.append(type + "_struct* " + fname + "; ");
+            sb.append(tps[tps.length - 1] + "_struct*" + stars + " " + fname + "; ");
             break;
       }
    }
@@ -627,7 +637,7 @@ public class CGen {
          case "unit":
             return field + " = 0; ";
          default:
-            //Is a pointer, assume we are 32-bit arch
+            //Is a pointer, or an array, eh, a pointer whatever
             return field + " = NULL; ";
       }
    }
@@ -641,10 +651,12 @@ public class CGen {
    * @param nlets Imrication level for "let"'s.
    * @return Created return variable name if any is created for above block.
    */
+   @SuppressWarnings("unchecked")
    private void buildBody(ASTNode parent, String cname, String mname, ASTNode root, int nlets) {
       boolean has;
       int top;
-      String tmp;
+      String tmp, drf;
+      Stack<Integer> deref;
 
       if(root.stype.equals("if")) {
          buildBody(root, cname, mname, root.getChildren().get(0), nlets);
@@ -768,7 +780,10 @@ public class CGen {
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == 0;");
                break;
             case SymbolValue.NEW:
-               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getProp("type").toString() + "_init__(GC_MALLOC(sizeof(" + root.getProp("type").toString() + "_struct)));");
+               if((deref = (Stack<Integer>) root.getProp("deref")) == null)
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getProp("type").toString() + "_init__(GC_MALLOC(sizeof(" + root.getProp("type").toString() + "_struct)));");
+               else
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = GC_MALLOC(" + deref.peek() + "*sizeof(" + CGen.localType(root.getProp("type").toString().replaceFirst("\\[\\]:", "")) + "));");
                break;
             case SymbolValue.ASSIGN:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
@@ -783,24 +798,30 @@ public class CGen {
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + regName(root.getValue().toString()) + ";");
                break;
             case SymbolValue.OBJECT_IDENTIFIER:
+               //Get back position in array
+               drf = "";
+               if((deref = (Stack<Integer>) root.getProp("deref")) != null) {
+                  for(int i = deref.size() - 1; i >= 0; i--)
+                     drf += "[" + deref.get(i) + "]";
+               }
                //Skip if we are the name of a method, or the name of the method in a call
                if(parent.stype.equals("method") || (parent.stype.equals("call") && parent.getChildren().get(1) == root))
                   break;
                if(root.getValue().toString().equals("self"))
                   sb.append(imapping.get(cname + "_" + mname).get(root) + " = self;");
                else if(root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString()) == null) {
-                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = self->" + root.getValue().toString() + ";");
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = self->" + root.getValue().toString() + drf + ";");
                } else {
                   top = nlets;
                   do {
                      if((tmp = lmapping.get(cname + mname + top + ">" + root.getValue().toString())) != null) {
-                        sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + lmapping.get(cname + mname + top + ">" + root.getValue().toString()) + ";");
+                        sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + lmapping.get(cname + mname + top + ">" + root.getValue().toString()) + drf + ";");
                         break;
                      }
                      top--;
                   } while(top > -1);
                   if(top == -1) {
-                     sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getValue().toString() + ";");
+                     sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getValue().toString() + drf + ";");
                   }
                }
                break;
@@ -845,9 +866,16 @@ public class CGen {
                sb.append(");");
                break;
             case "assign":
+               //Get back position in array
+               drf = "";
+               if((deref = (Stack<Integer>) root.getProp("deref")) != null) {
+                  for(int i = deref.size() - 1; i >= 0; i--)
+                     drf += "[" + deref.get(i) + "]";
+               }
+               //Build assign
                has = (root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) == null);
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" +
-                       (has? "self->" : "") + root.getChildren().get(0).getValue().toString() +
+                       (has? "self->" : "") + root.getChildren().get(0).getValue().toString() + drf +
                        ") = (" +  imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case "block":

@@ -20,6 +20,18 @@ class Cons extends List {
    next() : List { tail }
 }
 
+class UseArray {
+   arr : int32[][];
+   arr2 : List[];
+   alloc() : int32 {
+      arr <- new int32[][4];
+      arr[1] <- new int32[4];
+      arr2 <- new List[2];
+      arr[1][2] <- 4;
+      arr[1][2]
+   }
+}
+
 class Main extends IO {
    say2(a : int32, b : string : "Hi") : int32 {
       printInt(a).print(b);

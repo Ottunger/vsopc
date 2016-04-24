@@ -1,6 +1,7 @@
 package be.ac.ulg.vsop.analyzer;
 
 import java.util.HashMap;
+import java.util.Stack;
 
 import be.ac.ulg.vsop.parser.ASTNode;
 import be.ac.ulg.vsop.parser.SymbolValue;
@@ -131,10 +132,20 @@ public class Analyzer {
     * @param fonly Check only in fields.
     * @return Type.
     */
+   @SuppressWarnings("unchecked")
    private String getNodeType(ASTNode root, String cname, int index, boolean fonly) throws Exception {
+      Stack<Integer> deref;
       ASTNode node = (index == -1)? root: root.getChildren().get(index);
       ScopeItem ret;
-      if(node.itype == SymbolValue.OBJECT_IDENTIFIER) {
+      if(node.itype == SymbolValue.OBJECT_IDENTIFIER && (deref = (Stack<Integer>) node.getProp("deref")) != null) {
+         ret = root.scope.get(ScopeItem.FIELD, node.getValue().toString());
+         if(ret == null)
+            ret = Analyzer.findFieldAbove(ext, node, cname);
+         if(ret == null)
+            throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error used symbol " + node.getValue().toString() +
+                     " not the way it was defined");
+         return Analyzer.lastTokens(node, ret.userType.getProp("type").toString(), deref);
+      } else if(node.itype == SymbolValue.OBJECT_IDENTIFIER) {
          ret = root.scope.get(ScopeItem.FIELD, node.getValue().toString());
          if(ret == null)
             ret = Analyzer.findFieldAbove(ext, node, cname);
@@ -176,8 +187,10 @@ public class Analyzer {
     * @param scope The root scope.
     * @throws Exception
     */
+   @SuppressWarnings("unchecked")
    private void checkTypes(ASTNode root, String cname, Scope scope) throws Exception {
       String type;
+      Stack<Integer> deref;
       ScopeItem s, t;
       HashMap<String, ScopeItem> meths;
       
@@ -255,7 +268,18 @@ public class Analyzer {
                root.addProp("type", getNodeType(root, cname, 0, true));
                break;
             case SymbolValue.NEW:
-               root.addProp("type", root.getChildren().get(0).getValue().toString());
+               type = ASTNode.typeValue(root.getChildren().get(0));
+               if((deref = (Stack<Integer>) root.getProp("deref")) != null) {
+                  if(deref.size() > 1)
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot instantiate arrays of more than one dimension");
+                  type = "[]:" + type;
+               }
+               root.addProp("type", type);
+               //Should be done by parser but security first
+               if(getNodeType(root, cname, -1, true).equals("Object") || getNodeType(root, cname, -1, true).equals("string") ||
+                        getNodeType(root, cname, -1, true).equals("int32") || getNodeType(root, cname, -1, true).equals("bool") ||
+                        getNodeType(root, cname, -1, true).equals("unit") || getNodeType(root, cname, -1, true).equals("float"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " cannot be instantiated");
                break;
             default:
                break;
@@ -333,7 +357,7 @@ public class Analyzer {
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine symbol '" + root.getChildren().get(0).getValue().toString() + "'here");
                }
                root.addProp("type", getNodeType(root, cname, 0, true));
-               if(ext.get(getNodeType(root, cname, 0, true)) == null)
+               if(ext.get(Analyzer.basicType(getNodeType(root, cname, 0, true))) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, 0, true));
                if(root.getChildren().size() > 2 && !getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 2, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
@@ -345,9 +369,15 @@ public class Analyzer {
                if(root.getChildren().get(0).getValue().toString().equals("self"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
                //Check that assign a same typed-value or a parent-typed value
-               if(!Analyzer.isSameOrChild(ext, getNodeType(root, cname, 1, true), getNodeType(root, cname, 0, true)))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
-                           getNodeType(root, cname, 1, true) + " to " + getNodeType(root, cname, 0, true));
+               if((deref = (Stack<Integer>) root.getProp("deref")) == null) {
+                  if(!Analyzer.isSameOrChild(ext, getNodeType(root, cname, 1, true), getNodeType(root, cname, 0, true)))
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
+                              getNodeType(root, cname, 1, true) + " to " + getNodeType(root, cname, 0, true));
+               } else {
+                  if(!Analyzer.isSameOrChild(ext, getNodeType(root, cname, 1, true), Analyzer.lastTokens(root, getNodeType(root, cname, 0, true), deref)))
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
+                              getNodeType(root, cname, 1, true) + " to " + getNodeType(root, cname, 0, true));
+               }
                break;
             case "method":
                if(ext.get(getNodeType(root, cname, -1, false)) == null)
@@ -403,6 +433,34 @@ public class Analyzer {
    }
    
    /**
+    * Tokenizes an array type.
+    * @param root Root where symbol was used.
+    * @param st Type.
+    * @param deref Array listing.
+    * @return Final type.
+    */
+   public static String lastTokens(ASTNode root, String st, Stack<Integer> deref) throws Exception {
+      String types[] = st.split(":");
+      if(types.length == 1)
+         throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error used symbol is not an array at all");
+      if(types.length  - 1 < deref.size())
+         throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error used symbol is not an array that deep");
+      for(int i = deref.size() + 1; i < types.length; i++)
+         types[deref.size()] += ":" + types[i];
+      return types[deref.size()];
+   }
+   
+   /**
+    * Returns the type or root type of an array.
+    * @param st Type.
+    * @return Final type.
+    */
+   public static String basicType(String st) {
+      String types[] = st.split(":");
+      return types[types.length - 1];
+   }
+   
+   /**
     * Registers the scope items.
     * @param root The root of the program.
     * @param parent Parent of the current node.
@@ -410,8 +468,10 @@ public class Analyzer {
     * @param level Level of scope.
     * @throws Exception
     */
+   @SuppressWarnings("unchecked")
    private void regScope(ASTNode root, ASTNode parent, String cname, int level) throws Exception {
       String type;
+      Stack<Integer> deref;
       ScopeItem si;
       if(parent != null)
          root.scope.setParent(parent.scope);
@@ -437,7 +497,11 @@ public class Analyzer {
                //Try to find from a local scope
                si = root.scope.get(ScopeItem.FIELD, root.getValue().toString());
                if(si != null) {
-                  root.addProp("type", getNodeType(si.userType, cname, -1, false));
+                  deref = (Stack<Integer>) si.userType.getProp("deref");
+                  if(deref != null)
+                     root.addProp("type", Analyzer.lastTokens(root, getNodeType(si.userType, cname, -1, false), deref));
+                  else
+                     root.addProp("type", getNodeType(si.userType, cname, -1, false));
                   break;
                }
                //Skip a call
@@ -449,7 +513,11 @@ public class Analyzer {
                   si = root.scope.get(ScopeItem.CLASS, type);
                   //If found here or above, set the type of the node
                   if(si.userType.scope.get(ScopeItem.FIELD, root.getValue().toString()) != null || si.userType.scope.get(ScopeItem.METHOD, root.getValue().toString()) != null) {
-                     root.addProp("type", getNodeType(si.userType, cname, -1, false));
+                     deref = (Stack<Integer>) si.userType.getProp("deref");
+                     if(deref != null)
+                        root.addProp("type", Analyzer.lastTokens(root, getNodeType(si.userType, cname, -1, false), deref));
+                     else
+                        root.addProp("type", getNodeType(si.userType, cname, -1, false));
                      break;
                   }
                } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
@@ -534,13 +602,6 @@ public class Analyzer {
                if(ext.get(root.getChildren().get(0).getValue().toString()) != null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " has been defined several times");
                ext.put(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getValue().toString());
-               //Cannot extend built-in classes, but wait, this will be forbidden by parser...
-               /*
-               if(root.getChildren().get(1).getValue().toString().equals("string") || root.getChildren().get(1).getValue().toString().equals("int32") ||
-                        root.getChildren().get(1).getValue().toString().equals("bool") || root.getChildren().get(1).getValue().toString().equals("unit") ||
-                        root.getChildren().get(1).getValue().toString().equals("float"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " cannot extend built-in class or value");
-               */
                prim.put(root.getChildren().get(0).getValue().toString(), new HashMap<String, ScopeItem>());
                break;
             default:
