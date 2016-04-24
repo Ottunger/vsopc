@@ -1,5 +1,5 @@
 class List {
-   -head : int32;
+   +head : int32;
    +isNil() : bool { true }
    +length() : int32 { 0 }
    +head() : int32 { head }
@@ -43,6 +43,8 @@ class Main extends IO {
    +main() : int32 {
       let s : int32 <- 4 in
          let xs : Cons <- (new Cons).init(0, (new Cons).init(1, (new Cons).init(2, new Nil))) in {
+            xs.head <- 12;
+            //Have just assigned to public field :3
             xs.head();
             print("Here");
             printInt(xs.head());

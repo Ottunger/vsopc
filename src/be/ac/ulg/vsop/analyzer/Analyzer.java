@@ -100,8 +100,8 @@ public class Analyzer {
          throw new Exception("1:1: semantics error no Main class");
       if((si = si.userType.scope.get(ScopeItem.METHOD, "main")) == null)
          throw new Exception("1:1: semantics error no main method");
-      if(si.formals != null || !getNodeType(si.userType, "Main", -1, false).equals("int32"))
-         throw new Exception("1:1: semantics error bad main signature");
+      if(si.formals != null || !getNodeType(si.userType, "Main", -1, false).equals("int32") || si.sh == false)
+         throw new Exception("1:1: semantics error bad main signature, should be \"+main() : int32\"");
       //Check types
       checkTypes(root, null, root.scope);
    }
@@ -287,6 +287,17 @@ public class Analyzer {
          }
       } else {
          switch(root.stype) {
+            case "fieldget":
+               type = getNodeType(root, root.getChildren().get(0).getProp("type").toString(), 1, true);
+               if(type == null)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error no field " + root.getChildren().get(1).getValue().toString()
+                           + " in class (or type?) " + root.getChildren().get(0).getProp("type").toString());
+               root.addProp("type", type);
+               if(cname != root.getChildren().get(0).getProp("type").toString() &&
+                        Analyzer.findFieldAbove(ext, root.getChildren().get(1), root.getChildren().get(0).getProp("type").toString()).sh == false)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error field " +
+                           root.getChildren().get(1).getValue().toString() + " is private");
+               break;
             case "call":
                type = getNodeType(root, cname, 0, true);
                do {
@@ -371,7 +382,7 @@ public class Analyzer {
             case "assign":
                root.addProp("type", getNodeType(root, cname, 0, true));
                //Check that no assign to self
-               if(root.getChildren().get(0).getValue().toString().equals("self"))
+               if(root.getChildren().get(0).getValue() != null && root.getChildren().get(0).getValue().toString().equals("self"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
                //Check that assign a same typed-value or a parent-typed value
                if((deref = (Stack<Integer>) root.getProp("deref")) == null) {
@@ -509,8 +520,8 @@ public class Analyzer {
                      root.addProp("type", getNodeType(si.userType, cname, -1, false));
                   break;
                }
-               //Skip a call
-               if(parent.stype.equals("call")) {
+               //Skip a call or a fieldget
+               if(parent.stype.equals("call") || parent.stype.equals("fieldget")) {
                   break;
                }
                type = cname;

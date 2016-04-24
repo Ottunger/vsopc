@@ -390,7 +390,8 @@ public class CGen {
                if(!parent.stype.equals("method") && !(parent.stype.equals("call") && parent.getChildren().get(1) == root)) {
                   si = root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString());
                   if(si == null)
-                     si = Analyzer.findFieldAbove(ext, root, cname);
+                     si = Analyzer.findFieldAbove(ext, root, (parent.stype.equals("fieldget") && parent.getChildren().get(1) == root)?
+                              parent.getChildren().get(0).getProp("type").toString() : cname);
                   imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
                   itypes.get(cname + "_" + mname).put(root, CGen.localType(si.userType.getProp("type").toString()));
                }
@@ -415,6 +416,7 @@ public class CGen {
             case "block":
             case "let":
             case "uminus":
+            case "fieldget":
                imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
                itypes.get(cname + "_" + mname).put(root, CGen.localType(root.getProp("type").toString()));
                break;
@@ -804,8 +806,9 @@ public class CGen {
                   for(int i = deref.size() - 1; i >= 0; i--)
                      drf += "[" + deref.get(i) + "]";
                }
-               //Skip if we are the name of a method, or the name of the method in a call
-               if(parent.stype.equals("method") || (parent.stype.equals("call") && parent.getChildren().get(1) == root))
+               //Skip if we are the name of a method, or the name of the method in a call, or the accessed member of fieldget
+               if(parent.stype.equals("method") || (parent.stype.equals("call") && parent.getChildren().get(1) == root) ||
+                        (parent.stype.equals("fieldget") && parent.getChildren().get(1) == root))
                   break;
                if(root.getValue().toString().equals("self"))
                   sb.append(imapping.get(cname + "_" + mname).get(root) + " = self;");
@@ -848,6 +851,16 @@ public class CGen {
          }
       } else {
          switch(root.stype) {
+            case "fieldget":
+               //Get back position in array
+               drf = "";
+               if((deref = (Stack<Integer>) root.getProp("deref")) != null) {
+                  for(int i = deref.size() - 1; i >= 0; i--)
+                     drf += "[" + deref.get(i) + "]";
+               }
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ")->"
+                        + root.getChildren().get(1).getValue().toString() + drf + ";");
+               break;
             case "call":
                has = root.getChildren().size() > 2;
                //Do a dynamic dispatch if not required to use a static one
@@ -873,10 +886,16 @@ public class CGen {
                      drf += "[" + deref.get(i) + "]";
                }
                //Build assign
-               has = (root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) == null);
-               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" +
-                       (has? "self->" : "") + root.getChildren().get(0).getValue().toString() + drf +
-                       ") = (" +  imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               if(root.getChildren().get(0).stype.equals("fieldget")) {
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = ((" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0).getChildren().get(0))
+                           + ")->" + root.getChildren().get(0).getChildren().get(1).getValue().toString() + drf + ") = ("
+                           + imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               } else {
+                  has = (root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) == null);
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" +
+                          (has? "self->" : "") + root.getChildren().get(0).getValue().toString() + drf +
+                          ") = (" +  imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               }
                break;
             case "block":
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " +
