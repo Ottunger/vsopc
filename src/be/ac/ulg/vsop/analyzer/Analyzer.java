@@ -3,6 +3,7 @@ package be.ac.ulg.vsop.analyzer;
 import java.util.HashMap;
 import java.util.Stack;
 
+import be.ac.ulg.vsop.lexer.Symbol;
 import be.ac.ulg.vsop.parser.ASTNode;
 import be.ac.ulg.vsop.parser.SymbolValue;
 
@@ -49,7 +50,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
-      prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3));
+      prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, true));
       //Method printInt
       fms = new ASTNode("formals", "__dummy__");
       tmp = new ASTNode("formal", "__dummy__");
@@ -57,7 +58,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
-      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3));
+      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, true));
       //Method printFloat
       fms = new ASTNode("formals", "__dummy__");
       tmp = new ASTNode("formal", "__dummy__");
@@ -65,7 +66,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
-      prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3));
+      prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, true));
    }
    
    /**
@@ -302,6 +303,10 @@ public class Analyzer {
                if(type.equals(Analyzer.EMPTY))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot call method " +
                            root.getChildren().get(1).getValue().toString() + " on type " + getNodeType(root, cname, 0, true));
+               //If extended and private method...
+               if(extd && !type.equals(cname) && t.sh == false)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method " +
+                           root.getChildren().get(1).getValue().toString() + " is private");
                //Then our type is the one of the method
                root.addProp("type", getNodeType(t.userType, cname, -1, false));
                //Check ok arguments in both modes
@@ -488,7 +493,7 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown super class " + root.getChildren().get(1).getValue().toString());
                root.getChildren().get(0).addProp("type", root.getChildren().get(0).getValue().toString());
                //Put "self" everywhere in this class
-               root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1));
+               root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1, false));
                //Check for extends-loop
                if(Analyzer.isSameOrChild(ext, root.getChildren().get(1).getValue().toString(), root.getChildren().get(0).getValue().toString()))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " defines an extends-loop");
@@ -557,7 +562,7 @@ public class Analyzer {
             switch(root.stype) {
                case "formal":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level), 2);
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, false), 2);
                   //Register the type because this is not acquired bottom-up while cross checking
                   root.addProp("type", getNodeType(root, cname, 1, false));
                   if(ext.get(getNodeType(root, cname, 1, false)) == null)
@@ -567,11 +572,12 @@ public class Analyzer {
                   break;
                case "field":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level), 1);
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level,
+                                    ((Symbol)root.getProp("visi")).sym == SymbolValue.PLUS), 1);
                   break;
                case "let":
                   root.scope.put(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level));
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, false));
                   if(root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
                            ext.get(root.getChildren().get(1).getValue().toString()) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " +
@@ -637,7 +643,7 @@ public class Analyzer {
          si = new ScopeItem(ScopeItem.METHOD,
                has? root.getChildren().get(2).itype : root.getChildren().get(1).itype,
                has? root.getChildren().get(2) : root.getChildren().get(1),
-               has? root.getChildren().get(1) : null, 3);
+               has? root.getChildren().get(1) : null, 3, ((Symbol)root.getProp("visi")).sym == SymbolValue.PLUS);
          meths.put(root.getChildren().get(0).getValue().toString(), si);
       }
    }

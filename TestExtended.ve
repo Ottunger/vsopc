@@ -1,29 +1,29 @@
 class List {
-   head : int32;
-   isNil() : bool { true }
-   length() : int32 { 0 }
-   head() : int32 { head }
+   -head : int32;
+   +isNil() : bool { true }
+   +length() : int32 { 0 }
+   +head() : int32 { head }
 }
 
 (* Nil is nothing more than a glorified alias to List *)
 class Nil extends List { }
 
 class Cons extends List {
-   tail : List;
-   init(hd : int32, tl : List) : Cons {
+   -tail : List;
+   +init(hd : int32, tl : List) : Cons {
       head <- hd;
       tail <- tl;
       self
    }
-   isNil() : bool { false }
-   length() : int32 { 1 + tail.length() }
-   next() : List { tail }
+   +isNil() : bool { false }
+   +length() : int32 { 1 + tail.length() }
+   +next() : List { tail }
 }
 
 class UseArray {
-   arr : int32[][];
-   arr2 : List[];
-   alloc() : int32 {
+   -arr : int32[][];
+   -arr2 : List[];
+   +alloc() : int32 {
       arr <- new int32[][4];
       arr[1] <- new int32[4];
       arr2 <- new List[2];
@@ -33,14 +33,14 @@ class UseArray {
 }
 
 class Main extends IO {
-   say2(a : int32, b : string : "Hi") : int32 {
+   -say2(a : int32, b : string : "Hi") : int32 {
       printInt(a).print(b);
       3
    }
-   afloat() : float {
+   -afloat() : float {
       2.2f ^ 2
    }
-   main() : int32 {
+   +main() : int32 {
       let s : int32 <- 4 in
          let xs : Cons <- (new Cons).init(0, (new Cons).init(1, (new Cons).init(2, new Nil))) in {
             xs.head();

@@ -11,6 +11,7 @@ public class ScopeItem {
    public static final int CTYPE = 5;
    public static final int VOID = -1;
    
+   public boolean sh;
    public int type, stype, level;
    public ASTNode userType, formals;
    
@@ -26,6 +27,7 @@ public class ScopeItem {
       this.level = level;
       this.userType = userType;
       this.formals = null;
+      this.sh = true;
    }
    
    /**
@@ -34,13 +36,15 @@ public class ScopeItem {
     * @param stype Sub type.
     * @param userType Definition of custom type if uses so.
     * @param level Level at which was reg'd.
+    * @param sh Is public.
     */
-   public ScopeItem(int type, int stype, ASTNode userType, int level) {
+   public ScopeItem(int type, int stype, ASTNode userType, int level, boolean sh) {
       this.type = type;
       this.stype = stype;
       this.level = level;
       this.userType = userType;
       this.formals = null;
+      this.sh = sh;
    }
    
    /**
@@ -50,13 +54,15 @@ public class ScopeItem {
     * @param userType Definition of custom type if uses so.
     * @param formals Definition of expected arguments.
     * @param level Level at which was reg'd.
+    * @param sh Is public.
     */
-   public ScopeItem(int type, int stype, ASTNode userType, ASTNode formals, int level) {
+   public ScopeItem(int type, int stype, ASTNode userType, ASTNode formals, int level, boolean sh) {
       this.type = type;
       this.stype = stype;
       this.level = level;
       this.userType = userType;
       this.formals = formals;
+      this.sh = sh;
    }
 
 }

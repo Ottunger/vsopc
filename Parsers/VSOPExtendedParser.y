@@ -35,6 +35,7 @@ non terminal ASTNode types, lit, program, class_all, class_body;
 non terminal ASTNode field, may_assign, assign, method, formals, formals_full, formal;
 non terminal ASTNode block, block_full, expression, args, args_full, simtypes;
 non terminal Stack<Integer> deref;   
+non terminal Symbol visi;
 
 /* Precedences */
 precedence nonassoc LBRK, RBRK;
@@ -66,6 +67,8 @@ types ::= simtypes:s {: RESULT = s; :}
         | types:s LBRK RBRK {: RESULT = s; String st = RESULT.getProp("type").toString(); RESULT.addProp("type", "[]:" + st); s.setValue("[]:" + st); :};
 deref ::= LBRK INTEGER_LITERAL:t RBRK {: RESULT = new Stack<Integer>(); RESULT.push((Integer) t.val); :}
         | LBRK INTEGER_LITERAL:t RBRK deref:d {: RESULT = d; d.push((Integer) t.val); :};
+visi ::= PLUS:p {: RESULT = p; :}
+       | MINUS:p {: RESULT = p; :};
         
 lit ::= INTEGER_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.INTEGER_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "int32"); :}
       | FLOAT_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FLOAT_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "float"); :}
@@ -82,12 +85,12 @@ class_body ::= field:t class_body:c {: c.pushChild(t); RESULT = c; :}
              | method:t class_body:c {: c.pushChild(t); RESULT = c; :}
              | {: RESULT = new ASTNode(SymbolValue.CLASS, null); :};
 
-field ::= OBJECT_IDENTIFIER:o COLON types:t may_assign:m SEMICOLON {: RESULT = new ASTNode("field", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); :} ;
+field ::= visi:v OBJECT_IDENTIFIER:o COLON types:t may_assign:m SEMICOLON {: RESULT = new ASTNode("field", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); RESULT.addProp("visi", v); :} ;
 may_assign ::= assign:t {: RESULT = t; :}
              | {: RESULT = null; :};
 assign ::= ASSIGN expression:t {: RESULT = new ASTNode(SymbolValue.ASSIGN, null); RESULT.addChild(t); :};
 
-method ::= OBJECT_IDENTIFIER:o LPAR formals:f RPAR COLON types:t block:b {: RESULT = new ASTNode("method", null); RESULT.addProp("type", ASTNode.typeValue(t)); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); if(f != null) RESULT.addChild(f); RESULT.addChild(t); RESULT.addChild(b); :};
+method ::= visi:v OBJECT_IDENTIFIER:o LPAR formals:f RPAR COLON types:t block:b {: RESULT = new ASTNode("method", null); RESULT.addProp("type", ASTNode.typeValue(t)); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); RESULT.addChild(a); if(f != null) RESULT.addChild(f); RESULT.addChild(t); RESULT.addChild(b); RESULT.addProp("visi", v); :};
 formals ::= formal:t COMMA formals_full:c {: RESULT = c; c.pushChild(t); :}
           | formal:t {: RESULT = new ASTNode("formals", null); RESULT.pushChild(t); :}
           | {: RESULT = null; :};
