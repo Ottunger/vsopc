@@ -418,6 +418,7 @@ public class CGen {
             case "uminus":
             case "fieldget":
             case "cast":
+            case "deref":
                imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
                itypes.get(cname + "_" + mname).put(root, CGen.localType(root.getProp("type").toString()));
                break;
@@ -644,6 +645,19 @@ public class CGen {
             return field + " = NULL; ";
       }
    }
+   
+   /**
+    * Turns a deref subtree into a stack.
+    * @param root First deref node.
+    * @return Stack.
+    */
+   private static Stack<ASTNode> derefToStack(ASTNode root) {
+      Stack<ASTNode> deref = new Stack<ASTNode>();
+      for(; root.stype.equals("deref"); root = root.getChildren().get(1)) {
+         deref.add(0, root.getChildren().get(0));
+      }
+      return deref;
+   }
 
   /**
    * Add function body.
@@ -654,12 +668,12 @@ public class CGen {
    * @param nlets Imrication level for "let"'s.
    * @return Created return variable name if any is created for above block.
    */
-   @SuppressWarnings("unchecked")
    private void buildBody(ASTNode parent, String cname, String mname, ASTNode root, int nlets) {
       boolean has;
       int top;
       String tmp, drf;
-      Stack<Integer> deref;
+      Stack<ASTNode> deref;
+      Stack<String> ainit;
 
       if(root.stype.equals("if")) {
          buildBody(root, cname, mname, root.getChildren().get(0), nlets);
@@ -783,10 +797,27 @@ public class CGen {
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == 0;");
                break;
             case SymbolValue.NEW:
-               if((deref = (Stack<Integer>) root.getProp("deref")) == null)
+               if(root.getChildren().size() < 2)
                   sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + root.getProp("type").toString() + "_init__(GC_MALLOC(sizeof(" + root.getProp("type").toString() + "_struct)));");
-               else
-                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = GC_MALLOC(" + deref.peek() + "*sizeof(" + CGen.localType(root.getProp("type").toString().replaceFirst("\\[\\]:", "")) + "));");
+               else {
+                  ainit = new Stack<String>();
+                  deref = CGen.derefToStack(root.getChildren().get(1));
+                  tmp = root.getProp("type").toString().replaceFirst("\\[\\]:", "");
+                  for(int i = 0; i < deref.size() - 1; i++)
+                     ainit.push("_new__" + CGen.randomString());
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = GC_MALLOC(" + imapping.get(cname + "_" + mname).get(deref.peek()) + "*sizeof(" + CGen.localType(tmp) + "));");
+                  for(int i = deref.size() - 2; i >= 0; i--) {
+                     sb.append("for(int " + ainit.get(i) + " = 0; " + ainit.get(i) + " < " + imapping.get(cname + "_" + mname).get(deref.get(i + 1)) + "; " + ainit.get(i) + "++) {");
+                     tmp = tmp.replaceFirst("\\[\\]:", "");
+                     sb.append(imapping.get(cname + "_" + mname).get(root));
+                     for(int j = i; j < deref.size() - 1; j++)
+                        sb.append("[" + ainit.get(j) + "]");
+                     sb.append(" = GC_MALLOC(" + imapping.get(cname + "_" + mname).get(deref.get(i)) + "*sizeof(" + CGen.localType(tmp) + "));");
+                  }
+                  for(int i = deref.size() - 2; i >= 0; i--) {
+                     sb.append("}");
+                  }
+               }
                break;
             case SymbolValue.ASSIGN:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
@@ -803,9 +834,10 @@ public class CGen {
             case SymbolValue.OBJECT_IDENTIFIER:
                //Get back position in array
                drf = "";
-               if((deref = (Stack<Integer>) root.getProp("deref")) != null) {
+               if(root.getChildren().size() > 0) {
+                  deref = CGen.derefToStack(root.getChildren().get(0));
                   for(int i = deref.size() - 1; i >= 0; i--)
-                     drf += "[" + deref.get(i) + "]";
+                     drf += "[" + imapping.get(cname + "_" + mname).get(deref.get(i)) + "]";
                }
                //Skip if we are the name of a method, or the name of the method in a call, or the accessed member of fieldget
                if(parent.stype.equals("method") || (parent.stype.equals("call") && parent.getChildren().get(1) == root) ||
@@ -852,12 +884,16 @@ public class CGen {
          }
       } else {
          switch(root.stype) {
+            case "deref":
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
+               break;
             case "fieldget":
                //Get back position in array
                drf = "";
-               if((deref = (Stack<Integer>) root.getProp("deref")) != null) {
+               if(root.getChildren().size() > 2) {
+                  deref = CGen.derefToStack(root.getChildren().get(2));
                   for(int i = deref.size() - 1; i >= 0; i--)
-                     drf += "[" + deref.get(i) + "]";
+                     drf += "[" + imapping.get(cname + "_" + mname).get(deref.get(i)) + "]";
                }
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ")->"
                         + root.getChildren().get(1).getValue().toString() + drf + ";");
@@ -886,9 +922,10 @@ public class CGen {
             case "assign":
                //Get back position in array
                drf = "";
-               if((deref = (Stack<Integer>) root.getProp("deref")) != null) {
+               if(root.getChildren().size() > 2) {
+                  deref = CGen.derefToStack(root.getChildren().get(2));
                   for(int i = deref.size() - 1; i >= 0; i--)
-                     drf += "[" + deref.get(i) + "]";
+                     drf += "[" + imapping.get(cname + "_" + mname).get(deref.get(i)) + "]";
                }
                //Build assign
                if(root.getChildren().get(0).stype.equals("fieldget")) {
@@ -911,6 +948,7 @@ public class CGen {
                break;
             case "formal":
             case "args":
+            case "dummy":
                //Just to not gen an error
                break;
             default:

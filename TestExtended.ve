@@ -24,11 +24,13 @@ class UseArray {
    -arr : int32[][];
    -arr2 : List[];
    +alloc() : int32 {
-      arr <- new int32[][4];
-      arr[1] <- new int32[4];
+      arr <- new int32[2][4];
       arr2 <- new List[2];
       arr[1][2] <- 4;
       arr[1][2]
+   }
+   +get(i : int32, j : int32) : int32 {
+      arr[i][j]
    }
 }
 
@@ -68,6 +70,7 @@ class Main extends IO {
       print("Getting a float");
       printFloat(afloat());
       printFloat(@say2(3));
+      print("Getting an array element").printInt((new UseArray).alloc());
       0
    }
 }
