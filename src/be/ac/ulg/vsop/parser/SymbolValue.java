@@ -39,6 +39,7 @@ public class SymbolValue {
   public static final int TRUE = 18;
   public static final int NEW = 14;
   public static final int error = 1;
+  public static final int INCLUDE = 53;
   public static final int ISNULL = 12;
   public static final int NULL = 41;
   public static final int SWITCH = 49;
@@ -114,7 +115,8 @@ public class SymbolValue {
   "SWITCH",
   "LBRK",
   "RBRK",
-  "TILDE"
+  "TILDE",
+  "INCLUDE"
   };
 }
 

@@ -138,6 +138,7 @@ DecIntegerLiteral = [0-9]+
    "[" { return symbol(SymbolValue.LBRK); }
    "]" { return symbol(SymbolValue.RBRK); }
    "~" { return symbol(SymbolValue.TILDE); }
+   "#" { return symbol(SymbolValue.INCLUDE); }
 
    /* comments */
    {EndOfLineComment} {  }

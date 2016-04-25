@@ -608,7 +608,7 @@ public class Analyzer {
                case "field":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
                            new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level,
-                                    ScopeItem.fromSymbol((Symbol)root.getProp("visi"))), 1);
+                                    extd? ScopeItem.fromSymbol((Symbol)root.getProp("visi")) : ScopeItem.PRIVATE), 1);
                   break;
                case "let":
                   root.scope.put(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
@@ -678,7 +678,7 @@ public class Analyzer {
          si = new ScopeItem(ScopeItem.METHOD,
                has? root.getChildren().get(2).itype : root.getChildren().get(1).itype,
                has? root.getChildren().get(2) : root.getChildren().get(1),
-               has? root.getChildren().get(1) : null, 3, ScopeItem.fromSymbol((Symbol)root.getProp("visi")));
+               has? root.getChildren().get(1) : null, 3, extd? ScopeItem.fromSymbol((Symbol)root.getProp("visi")) : ScopeItem.PUBLIC);
          meths.put(root.getChildren().get(0).getValue().toString(), si);
       }
    }

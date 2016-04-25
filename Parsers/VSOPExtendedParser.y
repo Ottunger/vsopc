@@ -28,13 +28,13 @@ terminal Symbol LOWER, LOWER_EQUAL, ASSIGN, DOT;
 terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
-terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL, SWITCH, LBRK, RBRK, TILDE; /* Extensions */
+terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL;
+terminal Symbol SWITCH, LBRK, RBRK, TILDE, INCLUDE; /* Extensions */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
 non terminal ASTNode field, may_assign, assign, method, formals, formals_full, formal;
-non terminal ASTNode block, block_full, expression, args, args_full, simtypes;
-non terminal ASTNode deref;   
+non terminal ASTNode block, block_full, expression, args, args_full, simtypes, deref;   
 non terminal Symbol visi;
 
 /* Precedences */
@@ -79,7 +79,10 @@ lit ::= INTEGER_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col
       | NULL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.NULL, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "object"); :};
 
 program ::= class_all:t program:c {: c.pushChild(t); t.shuffleClass(); RESULT = c; :}
-          | class_all:t {: RESULT = new ASTNode("program", null); RESULT.addChild(t); t.shuffleClass(); :};
+          | class_all:t {: RESULT = new ASTNode("program", null); RESULT.addChild(t); t.shuffleClass(); :}
+          | INCLUDE STRING_LITERAL:s program:c {: c.addChild(new ASTNode("include", s.val)); :}
+          | INCLUDE STRING_LITERAL:s {: RESULT = new ASTNode("program", null); RESULT.addChild(new ASTNode("include", s.val)); :};
+          
 class_all ::= CLASS TYPE_IDENTIFIER:t LBRACE class_body:c RBRACE {: RESULT = c; ASTNode b = new ASTNode(SymbolValue.TYPE_IDENTIFIER, "Object"); b.addProp("line", t.line + ""); b.addProp("col", t.col + ""); c.addChild(b); ASTNode a = new ASTNode(SymbolValue.TYPE_IDENTIFIER, t.val); a.addProp("line", t.line + ""); a.addProp("col", t.col + ""); c.addChild(a); :}
              | CLASS TYPE_IDENTIFIER:t EXTENDS TYPE_IDENTIFIER:e LBRACE class_body:c RBRACE {: RESULT = c; ASTNode b = new ASTNode(SymbolValue.TYPE_IDENTIFIER, e.val); b.addProp("line", e.line + ""); b.addProp("col", e.col + ""); c.addChild(b); ASTNode a = new ASTNode(SymbolValue.TYPE_IDENTIFIER, t.val); a.addProp("line", t.line + ""); a.addProp("col", t.col + ""); c.addChild(a); :};
 class_body ::= field:t class_body:c {: c.pushChild(t); RESULT = c; :}

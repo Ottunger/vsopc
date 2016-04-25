@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 import java_cup.runtime.ComplexSymbolFactory;
 import java_cup.runtime.ScannerBuffer;
-import be.ac.ulg.vsop.lexer.Lexer;
 import be.ac.ulg.vsop.lexer.Symbol;
 
 public class Parser implements java_cup.runtime.Scanner {
@@ -19,14 +18,15 @@ public class Parser implements java_cup.runtime.Scanner {
    
    /**
     * Creates a parser by getting the list of tokens.
-    * @param lexer Lexer.
+    * @param args Original file name.
+    * @param ws Symbols.
     * @param ext Whether to consider VSOPExtended.
     */
-   public Parser(Lexer lexer, boolean ext) {
+   public Parser(String args, ArrayList<Symbol> ws, boolean ext) {
       root = null;
       failed = true;
-      tokens = lexer.getTokens();
-      Parser.name = lexer.name;
+      tokens = ws;
+      Parser.name = args;
       sb = new ScannerBuffer(this);
       Parser.lastLine = Parser.lastColumn = 0;
       extd = ext;

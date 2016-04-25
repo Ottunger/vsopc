@@ -84,7 +84,7 @@ public class Lexer {
          esc = false;
          try {
             s = p.yylex();
-         } catch(Exception e) {
+         } catch(Exception e) {e.printStackTrace();
             esc = true;
             ok = false;
             System.err.println(name + ":" + tryGuess(e.getMessage()));
@@ -117,10 +117,13 @@ public class Lexer {
 			ret[2] += ret[i];
 		
 		//25 is message "is not a valid VSOP syntax" length
-		if(ret[2].endsWith("is not a valid VSOP syntax") && ret[2].startsWith(" lexical error <0"))
-			ret[2] = ret[2].substring(0, ret[2].length() - 25) + "is not a valid number notation.";
-		
-		return ret[0] + ":" + ret[1] + ":" + ret[2];
+		if(ret.length > 2) {
+   		if(ret[2].endsWith("is not a valid VSOP syntax") && ret[2].startsWith(" lexical error <0"))
+   			ret[2] = ret[2].substring(0, ret[2].length() - 25) + "is not a valid number notation.";
+   		
+   		return ret[0] + ":" + ret[1] + ":" + ret[2];
+		}
+		return err;
 	}
 	
 	/**
@@ -146,5 +149,13 @@ public class Lexer {
 		   if(s.sym != SymbolValue.EOF)
 		      System.out.println(s);
 	}
+
+	/**
+	 * Changes the known tokens.
+	 * @param ws Tokens.
+	 */
+   public void setTokens(ArrayList<Symbol> ws) {
+      symbs = ws;
+   }
 
 }
