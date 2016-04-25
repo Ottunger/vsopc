@@ -71,6 +71,7 @@ class Main extends IO {
       printFloat(afloat());
       printFloat(@say2(3));
       print("Getting an array element").printInt((new UseArray).alloc());
+      print("Here is your echoed float: ").printFloat(inputFloat());
       0
    }
 }

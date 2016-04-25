@@ -66,6 +66,30 @@ public class Analyzer {
       tmp = new ASTNode("block", "__dummy__");
       tmp.addProp("type", "IO");
       prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
+      //Method printBool
+      fms = new ASTNode("formals", "__dummy__");
+      tmp = new ASTNode("formal", "__dummy__");
+      tmp.addProp("type", "bool");
+      fms.getChildren().add(0, tmp);
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "IO");
+      prim.get("IO").put("printBool", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
+      //Method inputLine
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "string");
+      prim.get("IO").put("inputLine", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
+      //Method inputInt
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "int32");
+      prim.get("IO").put("inputInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
+      //Method inputFloat
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "float");
+      prim.get("IO").put("inputFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
+      //Method inputBool
+      tmp = new ASTNode("block", "__dummy__");
+      tmp.addProp("type", "bool");
+      prim.get("IO").put("inputBool", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
    }
    
    /**
@@ -429,7 +453,7 @@ public class Analyzer {
             case "if":
                if(!getNodeType(root, cname, 0, true).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error if condition must be bool");
-               root.addProp("type", getNodeType(root, cname, 1, true));
+               root.addProp("type", "unit");
                if(root.getChildren().size() > 2) {
                   if(getNodeType(root, cname, 1, true).equals("unit") || getNodeType(root, cname, 2, true).equals("unit"))
                      root.addProp("type", "unit");
@@ -445,7 +469,7 @@ public class Analyzer {
                }
                break;
             case "while":
-               root.addProp("type", Analyzer.EMPTY);
+               root.addProp("type", "unit");
                if(!getNodeType(root, cname, 0, true).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error while condition must be bool");
                break;

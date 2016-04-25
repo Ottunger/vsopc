@@ -63,7 +63,8 @@ public class Compiler {
       		lexer.parse();
       		if(lexer.isParseFailed()) {
                System.err.println("Lexing error: quitting.");
-               System.exit(1);
+               ws.addAll(lexer.getTokens());
+               add.clear();
             }
       		wf = lexer.getTokens();
       		for(i = 0; i < wf.size(); i += 2) {
@@ -89,6 +90,10 @@ public class Compiler {
 		   lexer.setTokens(ws);
          lexer.dumpTokens();
          System.exit(lexer.isParseFailed()? 1 : 0);
+      }
+		if(lexer.isParseFailed()) {
+         System.err.println("Lexing error: quitting.");
+         System.exit(1);
       }
 		
 		Parser parser = new Parser(args[findex], ws, ext);

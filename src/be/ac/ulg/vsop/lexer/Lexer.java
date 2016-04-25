@@ -84,7 +84,7 @@ public class Lexer {
          esc = false;
          try {
             s = p.yylex();
-         } catch(Exception e) {e.printStackTrace();
+         } catch(Exception e) {
             esc = true;
             ok = false;
             System.err.println(name + ":" + tryGuess(e.getMessage()));

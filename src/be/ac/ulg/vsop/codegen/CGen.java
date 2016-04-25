@@ -87,11 +87,20 @@ public class CGen {
       sb.append("typedef void Object_struct; ");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
-               + "IO_struct* IO_printInt(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); struct IO_vtable {IO_struct* (*print)(IO_struct*, char*);"
-               + "IO_struct* (*printInt)(IO_struct*, int); IO_struct* (*printFloat)(IO_struct*, float);}; IO_vtable IO_static_vtable = {IO_print, IO_printInt};"
-               + "IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self; } IO_struct* IO_print(IO_struct* self, char* str) {puts(str);"
-               + "return self;} IO_struct* IO_printInt(IO_struct* self, int num) {printf(\"%d\\n\", num); return self;}"
-               + "IO_struct* IO_printFloat(IO_struct* self, float num) {printf(\"%f\\n\", num); return self;}");
+               + "IO_struct* IO_printInt(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); IO_struct* IO_printBool(IO_struct*, char);"
+               + "char* IO_inputLine(IO_struct*); int IO_inputInt(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);"
+               + "struct IO_vtable {IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int); IO_struct* (*printFloat)(IO_struct*, float);"
+               + "IO_struct* (*printBool)(IO_struct*, char); char* (*inputLine)(IO_struct*); int (*inputInt)(IO_struct*); float (*inputFloat)(IO_struct*);"
+               + "char (*inputBool)(IO_struct*);}; IO_vtable IO_static_vtable = {IO_print, IO_printInt, IO_printFloat, IO_printBool, IO_inputLine, IO_inputInt,"
+               + "IO_inputFloat, IO_inputBool}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
+               + "IO_struct* IO_print(IO_struct* self, char* str) {printf(\"%s\", str); return self;}"
+               + "IO_struct* IO_printInt(IO_struct* self, int num) {printf(\"%d\", num); return self;}"
+               + "IO_struct* IO_printFloat(IO_struct* self, float num) {printf(\"%f\", num); return self;}"
+               + "IO_struct* IO_printBool(IO_struct* self, char bool) {if(bool) printf(\"true\"); else printf(\"false\"); return self;}"
+               + "char* IO_inputLine(IO_struct* self) {char* ret = GC_MALLOC(256); if(!fgets(ret, 256, stdin)) {ret = GC_MALLOC(1); ret[0] = 0;} return ret;}"
+               + "int IO_inputInt(IO_struct* self) {int ret; if(scanf(\"%d\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret;}"
+               + "float IO_inputFloat(IO_struct* self) {float ret; if(scanf(\"%f\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret;}"
+               + "char IO_inputBool(IO_struct* self) {char ret; if(scanf(\"%c\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret && 0xFF;}");
       
       //From a first pass, generate the structures that classes rely are
       genTypedefs(ast, true);
@@ -249,7 +258,9 @@ public class CGen {
                   //Add IO methods if derived from it
                   if(Analyzer.isSameOrChild(ext, type, "IO"))
                      sb.append("IO_struct* (*print)(" + type + "_struct*, char*); IO_struct* (*printInt)(" + type + "_struct*, int);"
-                              + "IO_struct* (*printFloat)(" + type + "_struct*, float);");
+                              + "IO_struct* (*printFloat)(" + type + "_struct*, float); IO_struct* (*printBool)(" + type + "_struct*, char);"
+                              + "char* (*inputLine)(" + type + "_struct*); int (*inputInt)(" + type + "_struct*);"
+                              + "float (*inputFloat)(" + type + "_struct*); char (*inputBool)(" + type + "_struct*);");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      sb.append(sigs.get(i).ret + " (*" + methods.get(i) + ")(");
@@ -265,7 +276,7 @@ public class CGen {
                   sb.append(type + "_vtable " + type + "_static_vtable = {");
                   //Add IO methods if derived from it
                   if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_print,IO_printInt,IO_printFloat,");
+                     sb.append("IO_print,IO_printInt,IO_printFloat,IO_printBool,IO_inputLine,IO_inputInt,IO_inputFloat,IO_inputBool,");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      do {
@@ -408,6 +419,8 @@ public class CGen {
                break;
             case "while":
                brlabels.put(root, new String[] {"_check__" + CGen.randomString(), "_endwhile__" + CGen.randomString()});
+               imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
+               itypes.get(cname + "_" + mname).put(root, CGen.localType(root.getProp("type").toString()));
                break;
             case "if":
                brlabels.put(root, new String[] {"_if__" + CGen.randomString(), "_else__" + CGen.randomString(), "_endif__" + CGen.randomString()});
@@ -637,7 +650,7 @@ public class CGen {
          case "bool":
             return field + " = 0; ";
          case "string":
-            return field + " = GC_MALLOC(sizeof(char)); " + field + "[0] = '\0'; "; 
+            return field + " = GC_MALLOC(sizeof(char)); " + field + "[0] = 0; "; 
          case "unit":
             return field + " = 0; ";
          default:
@@ -678,22 +691,21 @@ public class CGen {
       if(root.stype.equals("if")) {
          buildBody(root, cname, mname, root.getChildren().get(0), nlets);
          sb.append("if(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ")");
-         sb.append("goto " + brlabels.get(root)[0] + ";");
-         if(root.getChildren().size() > 2) {
-            sb.append("else goto " + brlabels.get(root)[1] + ";");
-         }
+         sb.append("goto " + brlabels.get(root)[0] + "; else goto " + brlabels.get(root)[1] + ";");
          sb.append(brlabels.get(root)[0] + ":");
          buildBody(root, cname, mname, root.getChildren().get(1), nlets);
-         sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname)
-                 .get(root.getChildren().get(1)) + ";");
-         sb.append("goto " + brlabels.get(root)[2] + ";");
+         if(root.getChildren().size() > 2)
+            sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ";");
+         else
+            sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
+         sb.append("goto " + brlabels.get(root)[2] + ";" + brlabels.get(root)[1] + ":");
          if(root.getChildren().size() > 2) {
-            sb.append(brlabels.get(root)[1] + ":");
             buildBody(root, cname, mname, root.getChildren().get(2), nlets);
-            sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname)
-                    .get(root.getChildren().get(2)) + ";");
-            sb.append("goto " + brlabels.get(root)[2] + ";");
+            sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(2)) + ";");
+         } else {
+            sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
          }
+         sb.append("goto " + brlabels.get(root)[2] + ";");
          sb.append(brlabels.get(root)[2] + ":");
          return;
       } else if(root.stype.equals("while")) {
@@ -701,7 +713,9 @@ public class CGen {
          buildBody(root, cname, mname, root.getChildren().get(0), nlets);
          sb.append("if(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") {");
          buildBody(root, cname, mname, root.getChildren().get(1), nlets);
-         sb.append("} else goto " + brlabels.get(root)[1] + ";");
+         sb.append("} else { ");
+         sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
+         sb.append("goto " + brlabels.get(root)[1] + ";}");
          sb.append(brlabels.get(root)[1] + ":");
          return;
       } else if(root.stype.equals("let")) {
