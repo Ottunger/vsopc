@@ -100,7 +100,7 @@ public class CGen {
                + "char* IO_inputLine(IO_struct* self) {char* ret = GC_MALLOC(256); if(!fgets(ret, 256, stdin)) {ret = GC_MALLOC(1); ret[0] = 0;} return ret;}"
                + "int IO_inputInt(IO_struct* self) {int ret; if(scanf(\"%d\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret;}"
                + "float IO_inputFloat(IO_struct* self) {float ret; if(scanf(\"%f\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret;}"
-               + "char IO_inputBool(IO_struct* self) {char ret; if(scanf(\"%c\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret && 0xFF;}");
+               + "char IO_inputBool(IO_struct* self) {char ret; if(scanf(\"%c\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret? 0x01 : 0x00;}");
       
       //From a first pass, generate the structures that classes rely are
       genTypedefs(ast, true);
@@ -605,18 +605,21 @@ public class CGen {
                break;
             case "field":
                if(root.getChildren().size() > 2) {
-                  //Initialized
-                  sb.insert(c.initb, "self->" + root.getChildren().get(0).getValue().toString() + " = ");
-                  shift = ("self->" + root.getChildren().get(0).getValue().toString() + " = ").length();
-                  c.initb += shift;
-                  //Save and run
+                  //Build init body
                   save = sb;
                   tmp = sb = new StringBuilder();
                   buildBody(root, cname, null, root.getChildren().get(2), 0);
                   sb = save;
                   sb.insert(c.initb, tmp.toString() + "; ");
-                  shift += (tmp.toString() + "; ").length();
-                  c.initb += (tmp.toString() + "; ").length();
+                  shift = (tmp.toString() + "; ").length();
+                  c.initb += shift;
+                  //Initialized
+                  sb.insert(c.initb, "self->" + root.getChildren().get(0).getValue().toString() + " = ");
+                  shift += ("self->" + root.getChildren().get(0).getValue().toString() + " = ").length();
+                  c.initb += ("self->" + root.getChildren().get(0).getValue().toString() + " = ").length();
+                  sb.insert(c.initb, imapping.get(cname + "_" + null).get(root.getChildren().get(2)) + "; ");
+                  shift += (imapping.get(cname + "_" + null).get(root.getChildren().get(2)) + "; ").length();
+                  c.initb += (imapping.get(cname + "_" + null).get(root.getChildren().get(2)) + "; ").length();
                } else {
                   //Unitialized!
                   sb.insert(c.initb, "self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString()));

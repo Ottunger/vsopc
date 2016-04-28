@@ -417,7 +417,7 @@ public class Analyzer {
                root.addProp("type", getNodeType(root, cname, 0, true));
                if(ext.get(Analyzer.basicType(getNodeType(root, cname, 0, true))) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, 0, true));
-               if(root.getChildren().size() > 2 && !getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 2, true)))
+               if(root.getChildren().size() > 2 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 2, true), getNodeType(root, cname, 0, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, cname, 2, true) + " to " + getNodeType(root, cname, 0, true));
                break;

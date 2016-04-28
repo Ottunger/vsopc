@@ -1,5 +1,5 @@
 class List {
-   +head : int32;
+   +head : int32 <- 2;
    +isNil() : bool { true }
    +length() : int32 { 0 }
    +head() : int32 { head }
@@ -22,7 +22,7 @@ class Cons extends List {
 
 class UseArray {
    -arr : int32[][];
-   -arr2 : List[];
+   -arr2 : List[] <- new List[1];
    +alloc() : int32 {
       arr <- new int32[2][4];
       arr2 <- new List[2];
