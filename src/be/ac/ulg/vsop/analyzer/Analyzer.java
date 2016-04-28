@@ -420,6 +420,38 @@ public class Analyzer {
                if(root.getChildren().size() > 2 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 2, true), getNodeType(root, cname, 0, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, cname, 2, true) + " to " + getNodeType(root, cname, 0, true));
+               //If we have the "getter" property, we generate default getter/setter
+               if(root.getProp("getter") != null) {
+                  type = root.scope.get(ScopeItem.FIELD, "self").userType.getProp("type").toString();
+                  String get = "get" + root.getChildren().get(0).getValue().toString().toUpperCase().charAt(0) +
+                          root.getChildren().get(0).getValue().toString().substring(1);
+                  String set = "set" + root.getChildren().get(0).getValue().toString().toUpperCase().charAt(0) +
+                          root.getChildren().get(0).getValue().toString().substring(1);
+                  if(prim.get(type).containsKey(get) || prim.get(type).containsKey(set))
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error getter and setter for field " +
+                             root.getChildren().get(0).getValue().toString() + " are said to be default generated");
+                  //getter
+                  ASTNode m = new ASTNode("method", null);
+                  m.addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, get));
+                  m.addChild(root.getChildren().get(1).clone());
+                  m.addChild(new ASTNode("block", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0).getValue())));
+                  scope.get(ScopeItem.CLASS, type).userType.getChildren().add(m);
+                  prim.get(type).put(get, new ScopeItem(ScopeItem.METHOD, m.getChildren().get(1).itype, m.getChildren().get(1),
+                          null, 3, ScopeItem.PUBLIC));
+                  //setter
+                  m = new ASTNode("method", null);
+                  m.addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, set));
+                  m.addChild(new ASTNode("formals", null).addChild(new ASTNode("formal", null)
+                          .addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__set").addProp("type", root.getChildren().get(1).getProp("type")))));
+                  m.addChild(new ASTNode(SymbolValue.TYPE_IDENTIFIER, type).addProp("type", type));
+                  m.addChild(new ASTNode("block", null).addChild(new ASTNode("assign", null).addChild(
+                          new ASTNode(SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0).getValue())).addChild(
+                          new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__set")))
+                          .addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "self")));
+                  scope.get(ScopeItem.CLASS, type).userType.getChildren().add(m);
+                  prim.get(type).put(get, new ScopeItem(ScopeItem.METHOD, m.getChildren().get(2).itype, m.getChildren().get(2),
+                          m.getChildren().get(1), 3, ScopeItem.PUBLIC));
+               }
                break;
             case "assign":
                root.addProp("type", getNodeType(root, cname, 0, true));

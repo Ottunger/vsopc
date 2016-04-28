@@ -89,7 +89,8 @@ class_body ::= field:t class_body:c {: c.pushChild(t); RESULT = c; :}
              | method:t class_body:c {: c.pushChild(t); RESULT = c; :}
              | {: RESULT = new ASTNode(SymbolValue.CLASS, null); :};
 
-field ::= visi:v OBJECT_IDENTIFIER:o COLON types:t may_assign:m SEMICOLON {: RESULT = new ASTNode("field", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); RESULT.addProp("visi", v); :} ;
+field ::= visi:v OBJECT_IDENTIFIER:o COLON types:t may_assign:m SEMICOLON {: RESULT = new ASTNode("field", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); RESULT.addProp("visi", v); :}
+        | visi:v PLUS OBJECT_IDENTIFIER:o COLON types:t may_assign:m SEMICOLON {: RESULT = new ASTNode("field", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); RESULT.addProp("visi", v); RESULT.addProp("getter", true); :};
 may_assign ::= assign:t {: RESULT = t; :}
              | {: RESULT = null; :};
 assign ::= ASSIGN expression:t {: RESULT = new ASTNode(SymbolValue.ASSIGN, null); RESULT.addChild(t); :};

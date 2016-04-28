@@ -69,8 +69,9 @@ public class ASTNode implements Cloneable {
     * Add a child node to this node.
     * @param a Node.
     */
-   public void addChild(ASTNode a) {
+   public ASTNode addChild(ASTNode a) {
       children.add(a);
+      return this;
    }
    
    /**
@@ -91,7 +92,7 @@ public class ASTNode implements Cloneable {
    
    /**
     * Set the registered value.
-    * @param value Value.
+    * @param o Value.
     */
    public void setValue(Object o) {
       value = o;
@@ -110,8 +111,9 @@ public class ASTNode implements Cloneable {
     * @param k Key.
     * @param v Value.
     */
-   public void addProp(String k, Object v) {
+   public ASTNode addProp(String k, Object v) {
       prop.put(k, v);
+      return this;
    }
    
    /**
@@ -125,7 +127,7 @@ public class ASTNode implements Cloneable {
 
    /**
     * Prints to stdout this node and its children.
-    * @param All Print type info.
+    * @param all Print type info.
     */
    public void dump(boolean all) {
       ASTNode n;
