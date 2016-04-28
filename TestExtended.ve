@@ -1,5 +1,5 @@
 class List {
-   +head : int32 <- 2;
+   ++head : int32 <- 2;
    +isNil() : bool { true }
    +length() : int32 { 0 }
    +head() : int32 { head }
@@ -49,7 +49,7 @@ class Main extends IO {
             //Have just assigned to public field :3
             xs.head();
             print("Here");
-            printInt(xs.head());
+            printInt(xs.getHead());
             print("Here");
             printInt(xs.next().head());
             print("Here");
