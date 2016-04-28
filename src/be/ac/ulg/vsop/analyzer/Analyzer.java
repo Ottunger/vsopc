@@ -711,6 +711,9 @@ public class Analyzer {
                has? root.getChildren().get(2).itype : root.getChildren().get(1).itype,
                has? root.getChildren().get(2) : root.getChildren().get(1),
                has? root.getChildren().get(1) : null, 3, extd? ScopeItem.fromSymbol((Symbol)root.getProp("visi")) : ScopeItem.PUBLIC);
+         if(meths.containsKey(root.getChildren().get(0).getValue().toString()))
+            throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine method " +
+                    root.getChildren().get(0).getValue().toString() + " in the same class");
          meths.put(root.getChildren().get(0).getValue().toString(), si);
       } else if(root.stype.equals("field")) {
          //If we have the "getter" property, we generate default getter/setter
@@ -721,9 +724,6 @@ public class Analyzer {
                     root.getChildren().get(0).getValue().toString().substring(1);
             String set = "set" + root.getChildren().get(0).getValue().toString().toUpperCase().charAt(0) +
                     root.getChildren().get(0).getValue().toString().substring(1);
-            if(prim.get(type).containsKey(get) || prim.get(type).containsKey(set))
-               throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error getter and setter for field " +
-                       root.getChildren().get(0).getValue().toString() + " are said to be default generated");
             //getter
             ASTNode m = new ASTNode("method", null);
             m.addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, get));
