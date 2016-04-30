@@ -14,6 +14,7 @@ install-tools:
 	tar -xf gc-7.2f.tar.gz
 	cd gc-7.2; ./configure --prefix=/usr/local/gc --disable-threads; make; sudo make install
 	rm -rf gc-*
+	sudo cp -f generics.ve /usr/local/gc/
 	
 vsopc:
 	find -name "*.java" > sources

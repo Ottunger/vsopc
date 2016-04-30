@@ -44,51 +44,51 @@ public class Analyzer {
       prim.put("IO", new HashMap<String, ScopeItem>());
       //Rgister the methods of the well known IO class
       //Method print
-      fms = new ASTNode("formals", "__dummy__");
-      tmp = new ASTNode("formal", "__dummy__");
+      fms = new ASTNode("formals", null);
+      tmp = new ASTNode("formal", null);
       tmp.addProp("type", "string");
       fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
       prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printInt
-      fms = new ASTNode("formals", "__dummy__");
-      tmp = new ASTNode("formal", "__dummy__");
+      fms = new ASTNode("formals", null);
+      tmp = new ASTNode("formal", null);
       tmp.addProp("type", "int32");
       fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
       prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printFloat
-      fms = new ASTNode("formals", "__dummy__");
-      tmp = new ASTNode("formal", "__dummy__");
+      fms = new ASTNode("formals", null);
+      tmp = new ASTNode("formal", null);
       tmp.addProp("type", "float");
       fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
       prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printBool
-      fms = new ASTNode("formals", "__dummy__");
-      tmp = new ASTNode("formal", "__dummy__");
+      fms = new ASTNode("formals", null);
+      tmp = new ASTNode("formal", null);
       tmp.addProp("type", "bool");
       fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
       prim.get("IO").put("printBool", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method inputLine
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "string");
       prim.get("IO").put("inputLine", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputInt
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "int32");
       prim.get("IO").put("inputInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputFloat
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "float");
       prim.get("IO").put("inputFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputBool
-      tmp = new ASTNode("block", "__dummy__");
+      tmp = new ASTNode("block", null);
       tmp.addProp("type", "bool");
       prim.get("IO").put("inputBool", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
    }
@@ -127,7 +127,7 @@ public class Analyzer {
       if(si.formals != null || !getNodeType(si.userType, "Main", -1, false).equals("int32") || si.sh != ScopeItem.PUBLIC)
          throw new Exception("1:1: semantics error bad main signature, should be \"+main() : int32\"");
       //Check types
-      checkTypes(root, null, root.scope);
+      checkTypes(root, null, null, root.scope);
    }
    
    /**
@@ -207,13 +207,115 @@ public class Analyzer {
    }
    
    /**
+    * Generates a call to get the value of a wrapper class.
+    * @param cnode The node that generates the wrapper.
+    * @param parent Its parent.
+    * @param cname The class where found.
+    * @return A node that dereferences the wrapper.
+    * @throws Exception
+    */
+   private ASTNode unwrap(ASTNode cnode, ASTNode parent, String cname) throws Exception {
+      String type;
+      ASTNode deref = new ASTNode("call", null);
+      
+      switch(getNodeType(cnode, cname, -1, true)) {
+         case "Integer":
+            type = "int32";
+            break;
+         case "Float":
+            type = "float";
+            break;
+         case "String":
+            type = "string";
+            break;
+         case "Bool":
+            type = "bool";
+            break;
+         case "Unit":
+            type = "unit";
+            break;
+         default:
+            return cnode;
+      }
+      
+      deref.addProp("type", type);
+      deref.addChild(cnode).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "getValue"));
+      deref.scope.setParent(parent.scope);
+      return deref;
+   }
+   
+   /**
+    * Unwraps a value only if possible.
+    * @param root The node where unwrapping will be done.
+    * @param cname Class name.
+    * @param at Child to be swapped.
+    * @throws Exception
+    */
+   private void unwrapAt(ASTNode root, String cname, int at) throws Exception {
+      if(Character.isUpperCase(root.getChildren().get(at).getProp("type").toString().charAt(0)))
+         root.getChildren().set(at, unwrap(root.getChildren().get(at), root, cname));
+   }
+   
+   /**
+    * Generates a call to wrap a basic type in a class.
+    * @param inode The node that generates a basic type.
+    * @param parent Its parent.
+    * @param cname Class where found.
+    * @return Node that wraps the value.
+    * @throws Exception
+    */
+   private ASTNode wrap(ASTNode inode, ASTNode parent, String cname) throws Exception {
+      String type;
+      ASTNode ref = new ASTNode("call", null);
+      
+      switch(getNodeType(inode, cname, -1, true)) {
+         case "int32":
+            type = "Integer";
+            break;
+         case "float":
+            type = "Float";
+            break;
+         case "string":
+            type = "String";
+            break;
+         case "bool":
+            type = "Bool";
+            break;
+         case "unit":
+            type = "Unit";
+            break;
+         default:
+            return inode;
+      }
+      
+      ref.addProp("type", type);
+      ref.addChild(new ASTNode(SymbolValue.NEW, null).addChild(new ASTNode(SymbolValue.TYPE_IDENTIFIER, type).addProp("type", type)).addProp("type", type));
+      ref.addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "setValue")).addChild(new ASTNode("args", null).addChild(inode));
+      ref.scope.setParent(parent.scope);
+      return ref;
+   }
+   
+   /**
+    * Wraps a value only if possible.
+    * @param root The node where wrapping will be done.
+    * @param cname Class name.
+    * @param at Child to be swapped.
+    * @throws Exception
+    */
+   private void wrapAt(ASTNode root, String cname, int at) throws Exception {
+      if(Character.isLowerCase(root.getChildren().get(at).getProp("type").toString().charAt(0)))
+         root.getChildren().set(at, wrap(root.getChildren().get(at), root, cname));
+   }
+   
+   /**
     * Checks that the operations involve only ok types, and that a call to a method is indeed to one that exists.
     * @param root The root of program.
+    * @param parent The parent of root.
     * @param cname Class name.
     * @param scope The root scope.
     * @throws Exception
     */
-   private void checkTypes(ASTNode root, String cname, Scope scope) throws Exception {
+   private void checkTypes(ASTNode root, ASTNode parent, String cname, Scope scope) throws Exception {
       String type;
       ScopeItem s, t;
       HashMap<String, ScopeItem> meths;
@@ -224,7 +326,7 @@ public class Analyzer {
       }
       
       for(ASTNode r : root.getChildren()) {
-         checkTypes(r, cname, scope);
+         checkTypes(r, root, cname, scope);
       }
       
       if(root.getProp("line") == null && root.getChildren().size() > 0) {
@@ -235,11 +337,13 @@ public class Analyzer {
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.NOT:
+               unwrapAt(root, cname, 0);
                root.addProp("type", getNodeType(root, cname, 0, true));
-               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("bool"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '!' on this type");
+               if(!getNodeType(root, cname, 0, true).equals("bool"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can only use '!' on bool type");
                break;
             case SymbolValue.SWITCH:
+               unwrapAt(root, cname, 0);
                root.addProp("type", getNodeType(root, cname, 0, true).equals("int32")? "float" : "int32");
                if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can only switch between int32 and float");
@@ -253,6 +357,8 @@ public class Analyzer {
                break;
             case SymbolValue.AND:
             case SymbolValue.OR:
+               unwrapAt(root, cname, 0);
+               unwrapAt(root, cname, 1);
                root.addProp("type", getNodeType(root, cname, 0, true));
                if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("bool"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and/or on something not int32 or bool");
@@ -263,6 +369,8 @@ public class Analyzer {
             case SymbolValue.LOWER:
             case SymbolValue.GREATER_EQUAL:
             case SymbolValue.GREATER:
+               unwrapAt(root, cname, 0);
+               unwrapAt(root, cname, 1);
                root.addProp("type", "bool");
                if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary comparator on not both numeric types");
@@ -273,6 +381,8 @@ public class Analyzer {
             case SymbolValue.MINUS:
             case SymbolValue.TIMES:
             case SymbolValue.DIV:
+               unwrapAt(root, cname, 0);
+               unwrapAt(root, cname, 1);
                root.addProp("type", getNodeType(root, cname, 0, true));
                if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on not both numeric types");
@@ -280,6 +390,8 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on different types");
                break;
             case SymbolValue.POW:
+               unwrapAt(root, cname, 0);
+               unwrapAt(root, cname, 1);
                root.addProp("type", getNodeType(root, cname, 0, true));
                if(!getNodeType(root, cname, 1, true).equals("int32"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error exponent should be int32");
@@ -313,6 +425,7 @@ public class Analyzer {
       } else {
          switch(root.stype) {
             case "deref":
+               unwrapAt(root, cname, 0);
                root.addProp("type", getNodeType(root, cname, 0, true));
                if(!root.getProp("type").equals("int32"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot index array by " + root.getProp("type").toString());
@@ -376,7 +489,7 @@ public class Analyzer {
                                     ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
                      }
                   } else if(t.formals != null) {
-                     root.getChildren().add(2, new ASTNode("args", "__dummy__"));
+                     root.getChildren().add(2, new ASTNode("args", null));
                   }
                   if(t.formals != null) {
                      for(int i = root.getChildren().get(2).getChildren().size(); i < t.formals.getChildren().size(); i++) {
@@ -424,6 +537,8 @@ public class Analyzer {
                break;
             case "assign":
                root.addProp("type", getNodeType(root, cname, 0, true));
+               if(Character.isUpperCase(getNodeType(root, cname, 0, false).charAt(0)))
+                  wrapAt(root, cname, root.getChildren().size() < 3? 1 : 2);
                //Check that no assign to self
                if(root.getChildren().get(0).getValue() != null && root.getChildren().get(0).getValue().toString().equals("self"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
@@ -478,12 +593,15 @@ public class Analyzer {
                if(ext.get(getNodeType(root, cname, 1, false)) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, 1, false));
                //Check in the assign part of the "let"
+               if(root.getChildren().size() > 3 && Character.isUpperCase(getNodeType(root, cname, 1, false).charAt(0)))
+                  wrapAt(root, cname, 2);
                if(root.getChildren().size() > 3 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 2, true), getNodeType(root, cname, 1, false)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, cname, 2, true) + " to " + getNodeType(root, cname, 1, false));
                root.addProp("type", getNodeType(root, cname, root.getChildren().size() - 1, true));
                break;
             case "uminus":
+               unwrapAt(root, cname, 0);
                root.addProp("type", getNodeType(root, cname, 0, true));
                break;
             default:

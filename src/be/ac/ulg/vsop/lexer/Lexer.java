@@ -23,6 +23,11 @@ public class Lexer {
 		file = in;
 		this.name = name;
 		symbs = new ArrayList<Symbol>();
+		if(ext) {
+		   symbs.add(new Symbol(SymbolValue.INCLUDE, 0, 0));
+		   symbs.add(new Symbol(SymbolValue.STRING_LITERAL, 0, 0, System.getProperty("os.name").toLowerCase().indexOf("win") > -1?
+		            "generics.ve" : "/usr/local/gc/generics.ve"));
+		}
 		extd = ext;
 	}
 	

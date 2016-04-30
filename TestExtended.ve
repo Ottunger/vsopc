@@ -26,7 +26,10 @@ class UseArray {
    +alloc() : int32 {
       arr <- new int32[2][4];
       arr2 <- new List[2];
-      arr[1][2] <- 4;
+      let it : Integer <- 2 in {
+         it <- (new Integer).setValue(1);
+         arr[it][2] <- 4
+      };
       arr[1][2]
    }
    +get(i : int32, j : int32) : int32 {

@@ -55,7 +55,7 @@ public class Compiler {
       		try {
       			file = new ReaderWrapper(ft);
       		} catch (FileNotFoundException e) {
-      			System.err.println("File opening error");
+      			System.err.println("File opening error (" + f + ")");
       			System.exit(1);
       		}
       		
