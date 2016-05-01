@@ -65,19 +65,19 @@ class VSOPExtendedParser {
     "\1\17\1\20\1\21\1\22\1\23\1\24\1\25\1\26"+
     "\1\27\1\30\1\31\1\0\1\32\2\31\1\33\2\2"+
     "\1\34\1\35\1\0\1\36\2\0\2\37\1\40\2\41"+
-    "\1\0\2\42\1\0\2\43\1\0\1\43\25\0\1\44"+
+    "\1\0\2\42\1\0\2\43\1\0\1\43\26\0\1\44"+
     "\1\45\1\46\1\47\1\50\1\51\1\52\2\0\1\52"+
     "\2\53\1\54\1\55\1\56\1\57\1\60\1\61\1\62"+
     "\1\63\1\64\1\65\1\66\1\34\2\67\2\70\1\71"+
     "\1\40\1\72\1\73\1\74\5\0\2\75\1\0\2\76"+
-    "\11\0\2\77\2\0\2\100\3\0\1\101\1\102\1\0"+
-    "\2\103\2\104\2\105\2\0\2\106\14\0\2\107\2\110"+
-    "\2\111\2\0\2\112\1\0\2\113\2\114\4\0\2\115"+
-    "\1\0\1\116\2\117\2\0\2\120\2\121\2\122\1\0"+
-    "\2\123\2\124\1\0\2\125\2\126";
+    "\12\0\2\77\2\0\2\100\3\0\1\101\1\102\1\0"+
+    "\2\103\2\104\2\105\2\0\2\106\7\0\2\107\5\0"+
+    "\2\110\2\111\2\112\2\0\2\113\1\0\2\114\2\115"+
+    "\4\0\2\116\1\0\1\117\2\120\2\0\2\121\2\122"+
+    "\2\123\1\0\2\124\2\125\1\0\2\126\2\127";
 
   private static int [] zzUnpackAction() {
-    int [] result = new int[227];
+    int [] result = new int[231];
     int offset = 0;
     offset = zzUnpackAction(ZZ_ACTION_PACKED_0, offset, result);
     return result;
@@ -114,26 +114,26 @@ class VSOPExtendedParser {
     "\0\u0252\0\u0948\0\u017a\0\u0288\0\u097e\0\u09b4\0\u09ea\0\u0a20"+
     "\0\u0a56\0\u0a8c\0\u0ac2\0\u0af8\0\u0b2e\0\u0b64\0\u0b9a\0\u0bd0"+
     "\0\u0c06\0\u0c3c\0\u0c72\0\u0ca8\0\u0cde\0\u0d14\0\u0d4a\0\u0d80"+
-    "\0\u0db6\0\u0dec\0\u017a\0\u017a\0\u017a\0\u017a\0\u017a\0\u017a"+
-    "\0\u068a\0\u06c0\0\u0e22\0\u017a\0\u017a\0\u0e58\0\u0e8e\0\u017a"+
+    "\0\u0db6\0\u0dec\0\u0e22\0\u017a\0\u017a\0\u017a\0\u017a\0\u017a"+
+    "\0\u017a\0\u068a\0\u06c0\0\u0e58\0\u017a\0\u017a\0\u0e8e\0\u0ec4"+
     "\0\u017a\0\u017a\0\u017a\0\u017a\0\u017a\0\u017a\0\u017a\0\u017a"+
-    "\0\u017a\0\u017a\0\u0ec4\0\u017a\0\u0efa\0\u017a\0\u017a\0\u017a"+
-    "\0\u017a\0\u017a\0\u017a\0\u0f30\0\u0f66\0\u0f9c\0\u0fd2\0\u1008"+
-    "\0\u103e\0\u017a\0\u1074\0\u10aa\0\u017a\0\u10e0\0\u1116\0\u114c"+
-    "\0\u1182\0\u11b8\0\u11ee\0\u1224\0\u125a\0\u1290\0\u12c6\0\u017a"+
-    "\0\u12fc\0\u1332\0\u1368\0\u017a\0\u139e\0\u13d4\0\u0e58\0\u017a"+
-    "\0\u017a\0\u140a\0\u1440\0\u017a\0\u1476\0\u017a\0\u14ac\0\u017a"+
-    "\0\u14e2\0\u1518\0\u154e\0\u017a\0\u1584\0\u15ba\0\u15f0\0\u1626"+
-    "\0\u165c\0\u1692\0\u16c8\0\u16fe\0\u1734\0\u176a\0\u17a0\0\u17d6"+
-    "\0\u180c\0\u017a\0\u1842\0\u017a\0\u1878\0\u017a\0\u18ae\0\u18e4"+
-    "\0\u191a\0\u017a\0\u1950\0\u1986\0\u017a\0\u19bc\0\u017a\0\u19f2"+
-    "\0\u1a28\0\u1a5e\0\u1a94\0\u1aca\0\u017a\0\u1b00\0\u017a\0\u1b36"+
-    "\0\u017a\0\u1b6c\0\u1ba2\0\u1bd8\0\u017a\0\u1c0e\0\u017a\0\u1c44"+
-    "\0\u017a\0\u1c7a\0\u1cb0\0\u017a\0\u1ce6\0\u017a\0\u1d1c\0\u1d52"+
-    "\0\u017a\0\u1d88\0\u017a";
+    "\0\u017a\0\u017a\0\u017a\0\u0efa\0\u017a\0\u0f30\0\u017a\0\u017a"+
+    "\0\u017a\0\u017a\0\u017a\0\u017a\0\u0f66\0\u0f9c\0\u0fd2\0\u1008"+
+    "\0\u103e\0\u1074\0\u017a\0\u10aa\0\u10e0\0\u017a\0\u1116\0\u114c"+
+    "\0\u1182\0\u11b8\0\u11ee\0\u1224\0\u125a\0\u1290\0\u12c6\0\u12fc"+
+    "\0\u1332\0\u017a\0\u1368\0\u139e\0\u13d4\0\u017a\0\u140a\0\u1440"+
+    "\0\u0e8e\0\u017a\0\u017a\0\u1476\0\u14ac\0\u017a\0\u14e2\0\u017a"+
+    "\0\u1518\0\u017a\0\u154e\0\u1584\0\u15ba\0\u017a\0\u15f0\0\u1626"+
+    "\0\u165c\0\u1692\0\u16c8\0\u16fe\0\u1734\0\u176a\0\u017a\0\u17a0"+
+    "\0\u17d6\0\u180c\0\u1842\0\u1878\0\u18ae\0\u017a\0\u18e4\0\u017a"+
+    "\0\u191a\0\u017a\0\u1950\0\u1986\0\u19bc\0\u017a\0\u19f2\0\u1a28"+
+    "\0\u017a\0\u1a5e\0\u017a\0\u1a94\0\u1aca\0\u1b00\0\u1b36\0\u1b6c"+
+    "\0\u017a\0\u1ba2\0\u017a\0\u1bd8\0\u017a\0\u1c0e\0\u1c44\0\u1c7a"+
+    "\0\u017a\0\u1cb0\0\u017a\0\u1ce6\0\u017a\0\u1d1c\0\u1d52\0\u017a"+
+    "\0\u1d88\0\u017a\0\u1dbe\0\u1df4\0\u017a\0\u1e2a\0\u017a";
 
   private static int [] zzUnpackRowMap() {
-    int [] result = new int[227];
+    int [] result = new int[231];
     int offset = 0;
     offset = zzUnpackRowMap(ZZ_ROWMAP_PACKED_0, offset, result);
     return result;
@@ -194,149 +194,152 @@ class VSOPExtendedParser {
     "\10\110\1\0\10\110\1\0\2\111\3\0\1\107\4\110"+
     "\24\111\1\132\1\111\1\133\1\111\1\110\1\0\10\110"+
     "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\3\111"+
-    "\1\134\4\111\1\135\17\111\1\110\1\0\10\110\1\0"+
-    "\10\110\1\0\2\111\3\0\1\107\4\110\4\111\1\136"+
-    "\5\111\1\137\3\111\1\140\11\111\1\110\1\0\10\110"+
+    "\1\134\3\111\1\135\1\136\17\111\1\110\1\0\10\110"+
     "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\4\111"+
-    "\1\141\23\111\1\110\1\0\10\110\1\0\10\110\1\0"+
-    "\2\111\3\0\1\107\4\110\26\111\1\142\1\111\1\110"+
-    "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\112"+
-    "\6\113\1\114\3\113\1\143\5\113\1\144\3\113\2\114"+
-    "\5\113\1\114\1\115\1\0\10\113\1\0\10\113\1\0"+
-    "\1\113\1\114\53\0\1\145\64\0\1\146\2\0\1\147"+
-    "\65\0\1\150\12\0\2\64\1\151\34\64\1\0\2\64"+
-    "\2\152\20\64\1\0\1\64\1\0\1\153\1\154\63\0"+
-    "\1\155\1\156\1\157\1\156\6\155\1\160\1\155\1\161"+
-    "\5\155\1\162\1\163\1\164\5\155\1\165\4\155\1\166"+
-    "\24\155\1\167\1\155\51\0\1\170\57\0\1\171\22\0"+
-    "\2\73\1\172\63\73\1\74\1\173\4\174\2\74\2\75"+
-    "\1\74\2\75\2\74\1\75\1\74\1\75\2\74\1\75"+
-    "\1\74\2\75\5\74\1\75\1\174\1\74\10\174\1\74"+
-    "\10\174\1\74\2\75\2\74\10\76\2\77\1\76\2\77"+
-    "\2\76\1\77\1\76\1\77\2\76\1\77\1\76\2\77"+
-    "\5\76\1\77\24\76\2\77\3\76\1\175\4\176\2\76"+
-    "\2\77\1\76\2\77\2\76\1\77\1\76\1\77\2\76"+
-    "\1\77\1\76\2\77\5\76\1\100\1\176\1\76\10\176"+
-    "\1\76\10\176\1\76\1\77\1\100\2\76\10\0\2\177"+
-    "\1\0\2\177\2\0\1\177\1\0\1\177\2\0\1\177"+
-    "\1\0\2\177\5\0\1\177\24\0\2\177\2\0\2\103"+
-    "\1\200\63\103\2\0\1\201\65\0\1\202\65\0\1\203"+
-    "\73\0\1\204\15\0\2\204\5\0\1\204\25\0\1\204"+
-    "\3\0\1\107\4\110\5\111\1\205\22\111\1\110\1\0"+
+    "\1\137\5\111\1\140\3\111\1\141\11\111\1\110\1\0"+
     "\10\110\1\0\10\110\1\0\2\111\3\0\1\107\4\110"+
-    "\15\111\1\206\12\111\1\110\1\0\10\110\1\0\10\110"+
-    "\1\0\2\111\3\0\1\107\4\110\23\111\1\207\4\111"+
+    "\4\111\1\142\23\111\1\110\1\0\10\110\1\0\10\110"+
+    "\1\0\2\111\3\0\1\107\4\110\26\111\1\143\1\111"+
     "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\3\0"+
-    "\1\107\4\110\10\111\1\210\17\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\211\4\212\30\111"+
-    "\1\212\1\0\10\212\1\0\10\212\1\0\2\111\3\0"+
-    "\1\107\4\110\7\111\1\213\20\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\214\4\215\30\111"+
-    "\1\215\1\0\10\215\1\0\10\215\1\0\2\111\3\0"+
-    "\1\107\4\110\15\111\1\216\12\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\3\111"+
-    "\1\217\24\111\1\110\1\0\10\110\1\0\10\110\1\0"+
-    "\2\111\3\0\1\107\4\110\24\111\1\220\3\111\1\110"+
+    "\1\112\6\113\1\114\3\113\1\144\5\113\1\145\3\113"+
+    "\2\114\5\113\1\114\1\115\1\0\10\113\1\0\10\113"+
+    "\1\0\1\113\1\114\53\0\1\146\64\0\1\147\2\0"+
+    "\1\150\65\0\1\151\12\0\2\64\1\152\34\64\1\0"+
+    "\2\64\2\153\20\64\1\0\1\64\1\0\1\154\1\155"+
+    "\63\0\1\156\1\157\1\160\1\157\6\156\1\161\1\156"+
+    "\1\162\5\156\1\163\1\164\1\165\5\156\1\166\4\156"+
+    "\1\167\24\156\1\170\1\156\51\0\1\171\57\0\1\172"+
+    "\22\0\2\73\1\173\63\73\1\74\1\174\4\175\2\74"+
+    "\2\75\1\74\2\75\2\74\1\75\1\74\1\75\2\74"+
+    "\1\75\1\74\2\75\5\74\1\75\1\175\1\74\10\175"+
+    "\1\74\10\175\1\74\2\75\2\74\10\76\2\77\1\76"+
+    "\2\77\2\76\1\77\1\76\1\77\2\76\1\77\1\76"+
+    "\2\77\5\76\1\77\24\76\2\77\3\76\1\176\4\177"+
+    "\2\76\2\77\1\76\2\77\2\76\1\77\1\76\1\77"+
+    "\2\76\1\77\1\76\2\77\5\76\1\100\1\177\1\76"+
+    "\10\177\1\76\10\177\1\76\1\77\1\100\2\76\10\0"+
+    "\2\200\1\0\2\200\2\0\1\200\1\0\1\200\2\0"+
+    "\1\200\1\0\2\200\5\0\1\200\24\0\2\200\2\0"+
+    "\2\103\1\201\63\103\2\0\1\202\65\0\1\203\65\0"+
+    "\1\204\73\0\1\205\15\0\2\205\5\0\1\205\25\0"+
+    "\1\205\3\0\1\107\4\110\5\111\1\206\22\111\1\110"+
     "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\107"+
-    "\4\110\12\111\1\221\15\111\1\110\1\0\10\110\1\0"+
-    "\10\110\1\0\2\111\3\0\1\107\4\110\15\111\1\222"+
-    "\12\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
-    "\3\0\1\107\4\110\22\111\1\223\5\111\1\110\1\0"+
+    "\4\110\15\111\1\207\12\111\1\110\1\0\10\110\1\0"+
+    "\10\110\1\0\2\111\3\0\1\107\4\110\23\111\1\210"+
+    "\4\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
+    "\3\0\1\107\4\110\10\111\1\211\17\111\1\110\1\0"+
+    "\10\110\1\0\10\110\1\0\2\111\3\0\1\212\4\213"+
+    "\30\111\1\213\1\0\10\213\1\0\10\213\1\0\2\111"+
+    "\3\0\1\107\4\110\7\111\1\214\20\111\1\110\1\0"+
+    "\10\110\1\0\10\110\1\0\2\111\3\0\1\215\4\216"+
+    "\30\111\1\216\1\0\10\216\1\0\10\216\1\0\2\111"+
+    "\3\0\1\107\4\110\15\111\1\217\12\111\1\110\1\0"+
     "\10\110\1\0\10\110\1\0\2\111\3\0\1\107\4\110"+
-    "\13\111\1\224\14\111\1\110\1\0\10\110\1\0\10\110"+
-    "\1\0\2\111\3\0\1\107\4\110\10\111\1\225\17\111"+
+    "\3\111\1\220\24\111\1\110\1\0\10\110\1\0\10\110"+
+    "\1\0\2\111\3\0\1\107\4\110\24\111\1\221\3\111"+
     "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\3\0"+
-    "\1\107\4\110\7\111\1\226\20\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\227\4\230\15\111"+
-    "\1\231\12\111\1\230\1\0\10\230\1\0\10\230\1\0"+
-    "\2\111\3\0\1\107\4\110\4\111\1\232\23\111\1\110"+
-    "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\233"+
-    "\4\234\30\111\1\234\1\0\10\234\1\0\10\234\1\0"+
-    "\2\111\3\0\1\107\4\110\17\111\1\235\10\111\1\110"+
+    "\1\107\4\110\12\111\1\222\15\111\1\110\1\0\10\110"+
+    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\15\111"+
+    "\1\223\12\111\1\110\1\0\10\110\1\0\10\110\1\0"+
+    "\2\111\3\0\1\107\4\110\22\111\1\224\5\111\1\110"+
     "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\107"+
-    "\4\110\17\111\1\236\10\111\1\110\1\0\10\110\1\0"+
-    "\10\110\1\0\2\111\4\0\1\154\64\0\1\237\1\157"+
-    "\1\237\63\0\1\157\1\0\1\157\64\0\1\240\65\0"+
-    "\1\241\73\0\1\204\13\0\1\242\1\0\2\204\5\0"+
-    "\1\204\25\0\1\204\3\0\1\243\4\244\30\111\1\244"+
-    "\1\0\10\244\1\0\10\244\1\0\2\111\3\0\1\245"+
-    "\4\246\30\111\1\246\1\0\10\246\1\0\10\246\1\0"+
-    "\2\111\3\0\1\247\4\250\30\111\1\250\1\0\10\250"+
-    "\1\0\10\250\1\0\2\111\3\0\1\107\4\110\10\111"+
-    "\1\251\17\111\1\110\1\0\10\110\1\0\10\110\1\0"+
-    "\2\111\4\0\1\212\64\0\1\107\4\110\10\111\1\252"+
+    "\4\110\13\111\1\225\14\111\1\110\1\0\10\110\1\0"+
+    "\10\110\1\0\2\111\3\0\1\107\4\110\10\111\1\226"+
     "\17\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
-    "\4\0\1\215\64\0\1\253\4\254\30\111\1\254\1\0"+
-    "\10\254\1\0\10\254\1\0\2\111\3\0\1\107\4\110"+
-    "\12\111\1\255\15\111\1\110\1\0\10\110\1\0\10\110"+
-    "\1\0\2\111\3\0\1\107\4\110\17\111\1\256\10\111"+
-    "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\3\0"+
-    "\1\107\4\110\13\111\1\257\14\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\13\111"+
-    "\1\260\14\111\1\110\1\0\10\110\1\0\10\110\1\0"+
-    "\2\111\3\0\1\107\4\110\13\111\1\261\14\111\1\110"+
-    "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\107"+
-    "\4\110\4\111\1\262\23\111\1\110\1\0\10\110\1\0"+
-    "\10\110\1\0\2\111\3\0\1\107\4\110\12\111\1\263"+
+    "\3\0\1\107\4\110\24\111\1\227\3\111\1\110\1\0"+
+    "\10\110\1\0\10\110\1\0\2\111\3\0\1\107\4\110"+
+    "\7\111\1\230\20\111\1\110\1\0\10\110\1\0\10\110"+
+    "\1\0\2\111\3\0\1\231\4\232\15\111\1\233\12\111"+
+    "\1\232\1\0\10\232\1\0\10\232\1\0\2\111\3\0"+
+    "\1\107\4\110\4\111\1\234\23\111\1\110\1\0\10\110"+
+    "\1\0\10\110\1\0\2\111\3\0\1\235\4\236\30\111"+
+    "\1\236\1\0\10\236\1\0\10\236\1\0\2\111\3\0"+
+    "\1\107\4\110\17\111\1\237\10\111\1\110\1\0\10\110"+
+    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\17\111"+
+    "\1\240\10\111\1\110\1\0\10\110\1\0\10\110\1\0"+
+    "\2\111\4\0\1\155\64\0\1\241\1\160\1\241\63\0"+
+    "\1\160\1\0\1\160\64\0\1\242\65\0\1\243\73\0"+
+    "\1\205\13\0\1\244\1\0\2\205\5\0\1\205\25\0"+
+    "\1\205\3\0\1\245\4\246\30\111\1\246\1\0\10\246"+
+    "\1\0\10\246\1\0\2\111\3\0\1\247\4\250\30\111"+
+    "\1\250\1\0\10\250\1\0\10\250\1\0\2\111\3\0"+
+    "\1\251\4\252\30\111\1\252\1\0\10\252\1\0\10\252"+
+    "\1\0\2\111\3\0\1\107\4\110\10\111\1\253\17\111"+
+    "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\4\0"+
+    "\1\213\64\0\1\107\4\110\10\111\1\254\17\111\1\110"+
+    "\1\0\10\110\1\0\10\110\1\0\2\111\4\0\1\216"+
+    "\64\0\1\255\4\256\30\111\1\256\1\0\10\256\1\0"+
+    "\10\256\1\0\2\111\3\0\1\107\4\110\12\111\1\257"+
     "\15\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
-    "\3\0\1\107\4\110\3\111\1\264\24\111\1\110\1\0"+
-    "\10\110\1\0\10\110\1\0\2\111\4\0\1\230\64\0"+
-    "\1\107\4\110\20\111\1\265\7\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\22\111"+
-    "\1\266\5\111\1\110\1\0\10\110\1\0\10\110\1\0"+
-    "\2\111\4\0\1\234\64\0\1\107\4\110\15\111\1\267"+
-    "\12\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
-    "\3\0\1\107\4\110\10\111\1\270\17\111\1\110\1\0"+
-    "\10\110\1\0\10\110\1\0\2\111\3\0\1\271\6\272"+
-    "\1\0\15\272\2\0\5\272\1\0\1\272\1\0\10\272"+
-    "\1\0\10\272\1\0\1\272\5\0\1\244\65\0\1\246"+
-    "\65\0\1\250\64\0\1\273\4\274\30\111\1\274\1\0"+
-    "\10\274\1\0\10\274\1\0\2\111\3\0\1\275\4\276"+
-    "\30\111\1\276\1\0\10\276\1\0\10\276\1\0\2\111"+
-    "\4\0\1\254\64\0\1\107\4\110\12\111\1\277\15\111"+
+    "\3\0\1\107\4\110\17\111\1\260\10\111\1\110\1\0"+
+    "\10\110\1\0\10\110\1\0\2\111\3\0\1\107\4\110"+
+    "\13\111\1\261\14\111\1\110\1\0\10\110\1\0\10\110"+
+    "\1\0\2\111\3\0\1\107\4\110\13\111\1\262\14\111"+
     "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\3\0"+
-    "\1\107\4\110\4\111\1\300\23\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\301\4\302\30\111"+
-    "\1\302\1\0\10\302\1\0\10\302\1\0\2\111\3\0"+
-    "\1\107\4\110\4\111\1\303\23\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\304\4\305\30\111"+
-    "\1\305\1\0\10\305\1\0\10\305\1\0\2\111\3\0"+
-    "\1\306\4\307\30\111\1\307\1\0\10\307\1\0\10\307"+
-    "\1\0\2\111\3\0\1\107\4\110\13\111\1\310\14\111"+
+    "\1\107\4\110\13\111\1\263\14\111\1\110\1\0\10\110"+
+    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\4\111"+
+    "\1\264\23\111\1\110\1\0\10\110\1\0\10\110\1\0"+
+    "\2\111\3\0\1\107\4\110\12\111\1\265\15\111\1\110"+
+    "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\266"+
+    "\4\267\30\111\1\267\1\0\10\267\1\0\10\267\1\0"+
+    "\2\111\3\0\1\107\4\110\3\111\1\270\24\111\1\110"+
+    "\1\0\10\110\1\0\10\110\1\0\2\111\4\0\1\232"+
+    "\64\0\1\107\4\110\20\111\1\271\7\111\1\110\1\0"+
+    "\10\110\1\0\10\110\1\0\2\111\3\0\1\107\4\110"+
+    "\22\111\1\272\5\111\1\110\1\0\10\110\1\0\10\110"+
+    "\1\0\2\111\4\0\1\236\64\0\1\107\4\110\15\111"+
+    "\1\273\12\111\1\110\1\0\10\110\1\0\10\110\1\0"+
+    "\2\111\3\0\1\107\4\110\10\111\1\274\17\111\1\110"+
+    "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\275"+
+    "\6\276\1\0\15\276\2\0\5\276\1\0\1\276\1\0"+
+    "\10\276\1\0\10\276\1\0\1\276\5\0\1\246\65\0"+
+    "\1\250\65\0\1\252\64\0\1\277\4\300\30\111\1\300"+
+    "\1\0\10\300\1\0\10\300\1\0\2\111\3\0\1\301"+
+    "\4\302\30\111\1\302\1\0\10\302\1\0\10\302\1\0"+
+    "\2\111\4\0\1\256\64\0\1\107\4\110\12\111\1\303"+
+    "\15\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
+    "\3\0\1\107\4\110\4\111\1\304\23\111\1\110\1\0"+
+    "\10\110\1\0\10\110\1\0\2\111\3\0\1\305\4\306"+
+    "\30\111\1\306\1\0\10\306\1\0\10\306\1\0\2\111"+
+    "\3\0\1\107\4\110\4\111\1\307\23\111\1\110\1\0"+
+    "\10\110\1\0\10\110\1\0\2\111\3\0\1\310\4\311"+
+    "\30\111\1\311\1\0\10\311\1\0\10\311\1\0\2\111"+
+    "\3\0\1\312\4\313\30\111\1\313\1\0\10\313\1\0"+
+    "\10\313\1\0\2\111\3\0\1\107\4\110\13\111\1\314"+
+    "\14\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
+    "\4\0\1\267\64\0\1\107\4\110\15\111\1\315\12\111"+
     "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\3\0"+
-    "\1\107\4\110\15\111\1\311\12\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\21\111"+
-    "\1\312\6\111\1\110\1\0\10\110\1\0\10\110\1\0"+
-    "\2\111\3\0\1\107\4\110\10\111\1\313\17\111\1\110"+
-    "\1\0\10\110\1\0\10\110\1\0\2\111\3\0\1\314"+
-    "\4\315\30\111\1\315\1\0\10\315\1\0\10\315\1\0"+
-    "\2\111\3\0\1\107\4\110\13\111\1\316\14\111\1\110"+
-    "\1\0\10\110\1\0\10\110\1\0\2\111\4\0\1\317"+
-    "\65\0\1\274\65\0\1\276\64\0\1\320\4\321\30\111"+
-    "\1\321\1\0\10\321\1\0\10\321\1\0\2\111\3\0"+
-    "\1\107\4\110\25\111\1\322\2\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\4\0\1\302\64\0\1\107"+
-    "\4\110\5\111\1\323\22\111\1\110\1\0\10\110\1\0"+
-    "\10\110\1\0\2\111\4\0\1\305\65\0\1\307\64\0"+
+    "\1\107\4\110\21\111\1\316\6\111\1\110\1\0\10\110"+
+    "\1\0\10\110\1\0\2\111\3\0\1\107\4\110\10\111"+
+    "\1\317\17\111\1\110\1\0\10\110\1\0\10\110\1\0"+
+    "\2\111\3\0\1\320\4\321\30\111\1\321\1\0\10\321"+
+    "\1\0\10\321\1\0\2\111\3\0\1\107\4\110\13\111"+
+    "\1\322\14\111\1\110\1\0\10\110\1\0\10\110\1\0"+
+    "\2\111\4\0\1\323\65\0\1\300\65\0\1\302\64\0"+
     "\1\324\4\325\30\111\1\325\1\0\10\325\1\0\10\325"+
-    "\1\0\2\111\3\0\1\326\4\327\30\111\1\327\1\0"+
-    "\10\327\1\0\10\327\1\0\2\111\3\0\1\330\4\331"+
-    "\30\111\1\331\1\0\10\331\1\0\10\331\1\0\2\111"+
-    "\3\0\1\107\4\110\10\111\1\332\17\111\1\110\1\0"+
-    "\10\110\1\0\10\110\1\0\2\111\4\0\1\315\64\0"+
-    "\1\333\4\334\30\111\1\334\1\0\10\334\1\0\10\334"+
-    "\1\0\2\111\4\0\1\321\64\0\1\335\4\336\30\111"+
-    "\1\336\1\0\10\336\1\0\10\336\1\0\2\111\3\0"+
-    "\1\107\4\110\12\111\1\337\15\111\1\110\1\0\10\110"+
-    "\1\0\10\110\1\0\2\111\4\0\1\325\65\0\1\327"+
-    "\65\0\1\331\64\0\1\340\4\341\30\111\1\341\1\0"+
-    "\10\341\1\0\10\341\1\0\2\111\4\0\1\334\65\0"+
-    "\1\336\64\0\1\342\4\343\30\111\1\343\1\0\10\343"+
-    "\1\0\10\343\1\0\2\111\4\0\1\341\65\0\1\343"+
-    "\63\0";
+    "\1\0\2\111\3\0\1\107\4\110\25\111\1\326\2\111"+
+    "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\4\0"+
+    "\1\306\64\0\1\107\4\110\5\111\1\327\22\111\1\110"+
+    "\1\0\10\110\1\0\10\110\1\0\2\111\4\0\1\311"+
+    "\65\0\1\313\64\0\1\330\4\331\30\111\1\331\1\0"+
+    "\10\331\1\0\10\331\1\0\2\111\3\0\1\332\4\333"+
+    "\30\111\1\333\1\0\10\333\1\0\10\333\1\0\2\111"+
+    "\3\0\1\334\4\335\30\111\1\335\1\0\10\335\1\0"+
+    "\10\335\1\0\2\111\3\0\1\107\4\110\10\111\1\336"+
+    "\17\111\1\110\1\0\10\110\1\0\10\110\1\0\2\111"+
+    "\4\0\1\321\64\0\1\337\4\340\30\111\1\340\1\0"+
+    "\10\340\1\0\10\340\1\0\2\111\4\0\1\325\64\0"+
+    "\1\341\4\342\30\111\1\342\1\0\10\342\1\0\10\342"+
+    "\1\0\2\111\3\0\1\107\4\110\12\111\1\343\15\111"+
+    "\1\110\1\0\10\110\1\0\10\110\1\0\2\111\4\0"+
+    "\1\331\65\0\1\333\65\0\1\335\64\0\1\344\4\345"+
+    "\30\111\1\345\1\0\10\345\1\0\10\345\1\0\2\111"+
+    "\4\0\1\340\65\0\1\342\64\0\1\346\4\347\30\111"+
+    "\1\347\1\0\10\347\1\0\10\347\1\0\2\111\4\0"+
+    "\1\345\65\0\1\347\63\0";
 
   private static int [] zzUnpackTrans() {
-    int [] result = new int[7614];
+    int [] result = new int[7776];
     int offset = 0;
     offset = zzUnpackTrans(ZZ_TRANS_PACKED_0, offset, result);
     return result;
@@ -377,20 +380,20 @@ class VSOPExtendedParser {
     "\7\0\1\11\1\1\1\11\1\1\1\11\22\1\4\11"+
     "\1\1\11\11\2\1\4\11\1\1\1\0\1\11\6\1"+
     "\1\11\1\0\1\11\2\0\1\11\3\1\1\11\1\0"+
-    "\1\1\1\11\1\0\1\1\1\11\1\0\1\1\25\0"+
+    "\1\1\1\11\1\0\1\1\1\11\1\0\1\1\26\0"+
     "\6\11\1\1\2\0\2\11\2\1\13\11\1\1\1\11"+
     "\1\1\6\11\5\0\1\1\1\11\1\0\1\1\1\11"+
-    "\11\0\1\1\1\11\2\0\1\1\1\11\3\0\2\11"+
+    "\12\0\1\1\1\11\2\0\1\1\1\11\3\0\2\11"+
     "\1\0\1\1\1\11\1\1\1\11\1\1\1\11\2\0"+
-    "\1\1\1\11\14\0\1\1\1\11\1\1\1\11\1\1"+
-    "\1\11\2\0\1\1\1\11\1\0\1\1\1\11\1\1"+
-    "\1\11\4\0\1\1\1\11\1\0\1\11\1\1\1\11"+
-    "\2\0\1\1\1\11\1\1\1\11\1\1\1\11\1\0"+
-    "\1\1\1\11\1\1\1\11\1\0\1\1\1\11\1\1"+
-    "\1\11";
+    "\1\1\1\11\7\0\1\1\1\11\5\0\1\1\1\11"+
+    "\1\1\1\11\1\1\1\11\2\0\1\1\1\11\1\0"+
+    "\1\1\1\11\1\1\1\11\4\0\1\1\1\11\1\0"+
+    "\1\11\1\1\1\11\2\0\1\1\1\11\1\1\1\11"+
+    "\1\1\1\11\1\0\1\1\1\11\1\1\1\11\1\0"+
+    "\1\1\1\11\1\1\1\11";
 
   private static int [] zzUnpackAttribute() {
-    int [] result = new int[227];
+    int [] result = new int[231];
     int offset = 0;
     offset = zzUnpackAttribute(ZZ_ATTRIBUTE_PACKED_0, offset, result);
     return result;
@@ -876,449 +879,456 @@ class VSOPExtendedParser {
           case 1: 
             { yybegin(ERROR); yypushback(1);
             }
-          case 87: break;
+          case 88: break;
           case 2: 
             { /* ignore */
             }
-          case 88: break;
+          case 89: break;
           case 3: 
             { return symbol(SymbolValue.DIV);
             }
-          case 89: break;
+          case 90: break;
           case 4: 
             { return symbol(SymbolValue.TILDE);
             }
-          case 90: break;
+          case 91: break;
           case 5: 
             { return symbol(SymbolValue.DOT);
             }
-          case 91: break;
+          case 92: break;
           case 6: 
             { cbegin = yycolumn; rbegin = yyline; string.setLength(0); yybegin(STRING); string.append('"');
             }
-          case 92: break;
+          case 93: break;
           case 7: 
             { return symbol(SymbolValue.LBRACE);
             }
-          case 93: break;
+          case 94: break;
           case 8: 
             { return symbol(SymbolValue.RBRACE);
             }
-          case 94: break;
+          case 95: break;
           case 9: 
             { return symbol(SymbolValue.LPAR);
             }
-          case 95: break;
+          case 96: break;
           case 10: 
             { return symbol(SymbolValue.RPAR);
             }
-          case 96: break;
+          case 97: break;
           case 11: 
             { return symbol(SymbolValue.COLON);
             }
-          case 97: break;
+          case 98: break;
           case 12: 
             { return symbol(SymbolValue.SEMICOLON);
             }
-          case 98: break;
+          case 99: break;
           case 13: 
             { return symbol(SymbolValue.COMMA);
             }
-          case 99: break;
+          case 100: break;
           case 14: 
             { return symbol(SymbolValue.PLUS);
             }
-          case 100: break;
+          case 101: break;
           case 15: 
             { return symbol(SymbolValue.MINUS);
             }
-          case 101: break;
+          case 102: break;
           case 16: 
             { return symbol(SymbolValue.TIMES);
             }
-          case 102: break;
+          case 103: break;
           case 17: 
             { return symbol(SymbolValue.POW);
             }
-          case 103: break;
+          case 104: break;
           case 18: 
             { return symbol(SymbolValue.EQUAL);
             }
-          case 104: break;
+          case 105: break;
           case 19: 
             { return symbol(SymbolValue.LOWER);
             }
-          case 105: break;
+          case 106: break;
           case 20: 
             { return symbol(SymbolValue.GREATER);
             }
-          case 106: break;
+          case 107: break;
           case 21: 
             { return symbol(SymbolValue.SWITCH);
             }
-          case 107: break;
+          case 108: break;
           case 22: 
             { return symbol(SymbolValue.LBRK);
             }
-          case 108: break;
+          case 109: break;
           case 23: 
             { return symbol(SymbolValue.RBRK);
             }
-          case 109: break;
+          case 110: break;
           case 24: 
             { return symbol(SymbolValue.INCLUDE);
             }
-          case 110: break;
+          case 111: break;
           case 25: 
             { string.append(toVSOPString(yytext()));
             }
-          case 111: break;
+          case 112: break;
           case 26: 
             { yybegin(YYINITIAL); string.append('"'); return symbol(SymbolValue.STRING_LITERAL, string.toString(), rbegin, cbegin);
             }
-          case 112: break;
+          case 113: break;
           case 27: 
             { throw new java.io.IOException((yyline+1) + ":" + (yycolumn+1) + ": lexical error <" + yytext() + "> is a raw null character in a string.");
             }
-          case 113: break;
+          case 114: break;
           case 28: 
             { String err = yytext(); err = err.replace("\r", ""); err = err.replace("\n", ""); yybegin(YYINITIAL); throw new java.io.IOException((yyline+1) + ":" + (yycolumn+1) + ": lexical error <" + err + "> is not valid VSOP syntax.");
             }
-          case 114: break;
+          case 115: break;
           case 29: 
             { yybegin(YYINITIAL); throw new java.io.IOException((rbegin+1) + ":" + (cbegin+1) + ": lexical error <0x" + yytext() + "> is not a valid non-decimal number notation.");
             }
-          case 115: break;
+          case 116: break;
           case 30: 
             { yybegin(YYINITIAL); throw new java.io.IOException((rbegin+1) + ":" + (cbegin+1) + ": lexical error <0b" + yytext() + "> is not a valid non-decimal number notation.");
             }
-          case 116: break;
+          case 117: break;
           case 31: 
             { yypushback(1); yybegin(STRING); throw new java.io.IOException((yyline+1) + ":" + (yycolumn-1) + ": lexical error <\\x" + yytext() + "> is not a valid ASCII byte description.");
             }
-          case 117: break;
+          case 118: break;
           case 32: 
             { 
             }
-          case 118: break;
+          case 119: break;
           case 33: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -1);
             { return symbol(SymbolValue.TYPE_IDENTIFIER, yytext());
             }
-          case 119: break;
+          case 120: break;
           case 34: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -1);
             { return symbol(SymbolValue.OBJECT_IDENTIFIER, yytext());
             }
-          case 120: break;
+          case 121: break;
           case 35: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -1);
             { return symbol(SymbolValue.INTEGER_LITERAL, Integer.parseInt(yytext()));
             }
-          case 121: break;
+          case 122: break;
           case 36: 
             { cbegin = yycolumn; rbegin = yyline; yybegin(BIN);
             }
-          case 122: break;
+          case 123: break;
           case 37: 
             { cbegin = yycolumn; rbegin = yyline; yybegin(HEX);
             }
-          case 123: break;
+          case 124: break;
           case 38: 
             { ccomment.push(yycolumn); rcomment.push(yyline); nesting++; yybegin(COMMENT);
             }
-          case 124: break;
+          case 125: break;
           case 39: 
             { return symbol(SymbolValue.ASSIGN);
             }
-          case 125: break;
+          case 126: break;
           case 40: 
             { return symbol(SymbolValue.LOWER_EQUAL);
             }
-          case 126: break;
+          case 127: break;
           case 41: 
             { return symbol(SymbolValue.GREATER_EQUAL);
             }
-          case 127: break;
+          case 128: break;
           case 42: 
             { String err = yytext(); err = err.replace("\r", ""); err = err.replace("\n", ""); throw new java.io.IOException((yyline+1) + ":" + (yycolumn+1+yytext().trim().length()) + ": lexical error <" + err + "> is not a well-escaped possibly multi-line string.");
             }
-          case 128: break;
+          case 129: break;
           case 43: 
             { throw new java.io.IOException((yyline+1) + ":" + (yycolumn+1) + ": lexical error <" + yytext() + "> is not a valid espace character in a string.");
             }
-          case 129: break;
+          case 130: break;
           case 44: 
             { /* ignore still in string multi-line */
             }
-          case 130: break;
+          case 131: break;
           case 45: 
             { string.append("\\x0a");
             }
-          case 131: break;
+          case 132: break;
           case 46: 
             { string.append("\\x08");
             }
-          case 132: break;
+          case 133: break;
           case 47: 
             { yybegin(BYTESTRING); string.append("\\x");
             }
-          case 133: break;
+          case 134: break;
           case 48: 
             { string.append("\\x09");
             }
-          case 134: break;
+          case 135: break;
           case 49: 
             { string.append("\\x0c");
             }
-          case 135: break;
+          case 136: break;
           case 50: 
             { string.append("\\x0d");
             }
-          case 136: break;
+          case 137: break;
           case 51: 
             { string.append("\\\"");
             }
-          case 137: break;
+          case 138: break;
           case 52: 
             { string.append("\\\\");
             }
-          case 138: break;
+          case 139: break;
           case 53: 
             { ccomment.push(yycolumn); rcomment.push(yyline); nesting++;
             }
-          case 139: break;
+          case 140: break;
           case 54: 
             { ccomment.pop(); rcomment.pop(); nesting--; if(nesting == 0) yybegin(YYINITIAL);
             }
-          case 140: break;
+          case 141: break;
           case 55: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -1);
             { yybegin(YYINITIAL); return symbol(SymbolValue.INTEGER_LITERAL, Integer.parseInt(yytext(), 16), rbegin, cbegin);
             }
-          case 141: break;
+          case 142: break;
           case 56: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -1);
             { yybegin(YYINITIAL); return symbol(SymbolValue.INTEGER_LITERAL, Integer.parseInt(yytext(), 2), rbegin, cbegin);
             }
-          case 142: break;
+          case 143: break;
           case 57: 
             { yybegin(STRING); string.append(yytext());
             }
-          case 143: break;
+          case 144: break;
           case 58: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -2);
             { return symbol(SymbolValue.TYPE_IDENTIFIER, yytext());
             }
-          case 144: break;
+          case 145: break;
           case 59: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -2);
             { return symbol(SymbolValue.OBJECT_IDENTIFIER, yytext());
             }
-          case 145: break;
+          case 146: break;
           case 60: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -2);
             { return symbol(SymbolValue.INTEGER_LITERAL, Integer.parseInt(yytext()));
             }
-          case 146: break;
+          case 147: break;
           case 61: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 2);
             { return symbol(SymbolValue.DO);
             }
-          case 147: break;
+          case 148: break;
           case 62: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 2);
             { return symbol(SymbolValue.OR);
             }
-          case 148: break;
+          case 149: break;
           case 63: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 2);
             { return symbol(SymbolValue.IN);
             }
-          case 149: break;
+          case 150: break;
           case 64: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 2);
             { return symbol(SymbolValue.IF);
             }
-          case 150: break;
+          case 151: break;
           case 65: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -2);
             { yybegin(YYINITIAL); return symbol(SymbolValue.INTEGER_LITERAL, Integer.parseInt(yytext(), 16), rbegin, cbegin);
             }
-          case 151: break;
+          case 152: break;
           case 66: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -2);
             { yybegin(YYINITIAL); return symbol(SymbolValue.INTEGER_LITERAL, Integer.parseInt(yytext(), 2), rbegin, cbegin);
             }
-          case 152: break;
+          case 153: break;
           case 67: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 3);
             { return symbol(SymbolValue.AND);
             }
-          case 153: break;
+          case 154: break;
           case 68: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 3);
             { return symbol(SymbolValue.NOT);
             }
-          case 154: break;
+          case 155: break;
           case 69: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 3);
             { return symbol(SymbolValue.NEW);
             }
-          case 155: break;
+          case 156: break;
           case 70: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 3);
             { return symbol(SymbolValue.LET);
             }
-          case 156: break;
+          case 157: break;
           case 71: 
+            // lookahead expression with fixed base length
+            zzMarkedPos = Character.offsetByCodePoints
+                (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 3);
+            { return symbol(SymbolValue.FOR);
+            }
+          case 158: break;
+          case 72: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -1);
             { return symbol(SymbolValue.FLOAT_LITERAL, Float.parseFloat(yytext()));
             }
-          case 157: break;
-          case 72: 
+          case 159: break;
+          case 73: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 4);
             { return symbol(SymbolValue.NULL);
             }
-          case 158: break;
-          case 73: 
+          case 160: break;
+          case 74: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 4);
             { return symbol(SymbolValue.BOOL);
             }
-          case 159: break;
-          case 74: 
+          case 161: break;
+          case 75: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 4);
             { return symbol(SymbolValue.ELSE);
             }
-          case 160: break;
-          case 75: 
+          case 162: break;
+          case 76: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 4);
             { return symbol(SymbolValue.TRUE);
             }
-          case 161: break;
-          case 76: 
+          case 163: break;
+          case 77: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 4);
             { return symbol(SymbolValue.THEN);
             }
-          case 162: break;
-          case 77: 
+          case 164: break;
+          case 78: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 4);
             { return symbol(SymbolValue.UNIT);
             }
-          case 163: break;
-          case 78: 
+          case 165: break;
+          case 79: 
             // lookahead expression with fixed lookahead length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzMarkedPos, -2);
             { return symbol(SymbolValue.FLOAT_LITERAL, Float.parseFloat(yytext()));
             }
-          case 164: break;
-          case 79: 
+          case 166: break;
+          case 80: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 5);
             { return symbol(SymbolValue.CLASS);
             }
-          case 165: break;
-          case 80: 
+          case 167: break;
+          case 81: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 5);
             { return symbol(SymbolValue.FALSE);
             }
-          case 166: break;
-          case 81: 
+          case 168: break;
+          case 82: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 5);
             { return symbol(SymbolValue.FLOAT);
             }
-          case 167: break;
-          case 82: 
+          case 169: break;
+          case 83: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 5);
             { return symbol(SymbolValue.INT32);
             }
-          case 168: break;
-          case 83: 
+          case 170: break;
+          case 84: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 5);
             { return symbol(SymbolValue.WHILE);
             }
-          case 169: break;
-          case 84: 
+          case 171: break;
+          case 85: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 6);
             { return symbol(SymbolValue.STRING);
             }
-          case 170: break;
-          case 85: 
+          case 172: break;
+          case 86: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 6);
             { return symbol(SymbolValue.ISNULL);
             }
-          case 171: break;
-          case 86: 
+          case 173: break;
+          case 87: 
             // lookahead expression with fixed base length
             zzMarkedPos = Character.offsetByCodePoints
                 (zzBufferL, zzStartRead, zzEndRead - zzStartRead, zzStartRead, 7);
             { return symbol(SymbolValue.EXTENDS);
             }
-          case 172: break;
+          case 174: break;
           default:
             zzScanError(ZZ_NO_MATCH);
         }

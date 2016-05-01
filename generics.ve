@@ -24,3 +24,44 @@ class Float {
 class String {
    -+value : string;
 }
+
+class ArrayDebug extends IO {
+   -len : int32;
+   -values : Object[];
+   
+   +init(l : int32) : ArrayDebug {
+      len <- l;
+      values <- new Object[len];
+      self
+   }
+   
+   +get(i : int32) : Object {
+      if i < len then
+         values[i]
+      else {
+         print("Runtime array index out of bounds\n");
+         null
+      }
+   }
+   
+   +set(i : int32, o : Object) : ArrayDebug {
+      if i < len then {
+         values[i] <- o;
+         ()
+      } else {
+         print("Runtime array index out of bounds\n");
+         ()
+      };
+      self
+   }
+   
+   +size() : int32 {
+      len
+   }
+   
+   +dumpAsIntArray() : ArrayDebug {
+      for n : values : len do
+         printInt(n<Integer>).print("\n");
+      self
+   }
+}

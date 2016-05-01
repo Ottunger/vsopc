@@ -687,7 +687,7 @@ public class CGen {
    private void buildBody(ASTNode parent, String cname, String mname, ASTNode root, int nlets) {
       boolean has;
       int top;
-      String tmp, drf;
+      String tmp = null, drf;
       Stack<ASTNode> deref;
       Stack<String> ainit;
 
@@ -887,6 +887,9 @@ public class CGen {
             case SymbolValue.UNIT_VALUE:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
                break;
+            case SymbolValue.NULL:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (void*)0;");
+               break;
             case SymbolValue.INT32:
             case SymbolValue.FLOAT:
             case SymbolValue.STRING:
@@ -951,9 +954,19 @@ public class CGen {
                            + imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                } else {
                   has = (root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString()) == null);
-                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" +
-                          (has? "self->" : "") + root.getChildren().get(0).getValue().toString() + drf +
-                          ") = (" +  imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+                  if(has == false) {
+                     top = nlets;
+                     do {
+                        if((tmp = lmapping.get(cname + mname + top + ">" + root.getChildren().get(0).getValue().toString())) != null)
+                           break;
+                        top--;
+                     } while(top > -1);
+                     if(top == -1) {
+                        tmp = root.getValue().toString();
+                     }
+                  }
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + (has? "self->" +
+                           root.getChildren().get(0).getValue().toString() : tmp) + drf + ") = (" +  imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                }
                break;
             case "block":

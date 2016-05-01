@@ -50,7 +50,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
-      prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printInt
       fms = new ASTNode("formals", null);
       tmp = new ASTNode("formal", null);
@@ -58,7 +58,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
-      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printFloat
       fms = new ASTNode("formals", null);
       tmp = new ASTNode("formal", null);
@@ -66,7 +66,7 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
-      prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printBool
       fms = new ASTNode("formals", null);
       tmp = new ASTNode("formal", null);
@@ -74,23 +74,23 @@ public class Analyzer {
       fms.getChildren().add(0, tmp);
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "IO");
-      prim.get("IO").put("printBool", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, fms, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("printBool", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method inputLine
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "string");
-      prim.get("IO").put("inputLine", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("inputLine", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputInt
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "int32");
-      prim.get("IO").put("inputInt", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("inputInt", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputFloat
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "float");
-      prim.get("IO").put("inputFloat", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("inputFloat", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputBool
       tmp = new ASTNode("block", null);
       tmp.addProp("type", "bool");
-      prim.get("IO").put("inputBool", new ScopeItem(ScopeItem.METHOD, SymbolValue.TYPE_IDENTIFIER, tmp, null, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("inputBool", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
    }
    
    /**
@@ -127,7 +127,7 @@ public class Analyzer {
       if(si.formals != null || !getNodeType(si.userType, "Main", -1, false).equals("int32") || si.sh != ScopeItem.PUBLIC)
          throw new Exception("1:1: semantics error bad main signature, should be \"+main() : int32\"");
       //Check types
-      checkTypes(root, null, null, root.scope);
+      checkTypes(root, null, root.scope);
    }
    
    /**
@@ -310,12 +310,11 @@ public class Analyzer {
    /**
     * Checks that the operations involve only ok types, and that a call to a method is indeed to one that exists.
     * @param root The root of program.
-    * @param parent The parent of root.
     * @param cname Class name.
     * @param scope The root scope.
     * @throws Exception
     */
-   private void checkTypes(ASTNode root, ASTNode parent, String cname, Scope scope) throws Exception {
+   private void checkTypes(ASTNode root, String cname, Scope scope) throws Exception {
       String type;
       ScopeItem s, t;
       HashMap<String, ScopeItem> meths;
@@ -326,7 +325,7 @@ public class Analyzer {
       }
       
       for(ASTNode r : root.getChildren()) {
-         checkTypes(r, root, cname, scope);
+         checkTypes(r, cname, scope);
       }
       
       if(root.getProp("line") == null && root.getChildren().size() > 0) {
@@ -484,9 +483,14 @@ public class Analyzer {
                      for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
                         String arg = getNodeType(root.getChildren().get(2), cname, i, true);
                         String formal = getNodeType(t.formals, cname, i, true);
-                        if(!Analyzer.isSameOrChild(ext, arg, formal))
-                           throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
-                                    ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+                        //We may have a problem, but why not bother try before?
+                        if(!Analyzer.isSameOrChild(ext, arg, formal)) {
+                           unwrapAt(root.getChildren().get(2), cname, i);
+                           arg = getNodeType(root.getChildren().get(2), cname, i, true);
+                           if(!Analyzer.isSameOrChild(ext, arg, formal))
+                              throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
+                                       ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+                        }
                      }
                   } else if(t.formals != null) {
                      root.getChildren().add(2, new ASTNode("args", null));
@@ -513,9 +517,14 @@ public class Analyzer {
                      for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
                         String arg = getNodeType(root.getChildren().get(2), cname, i, true);
                         String formal = getNodeType(t.formals, cname, i, true);
-                        if(!Analyzer.isSameOrChild(ext, arg, formal))
-                           throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
-                                    ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+                        //We may have a problem, but why not bother try before?
+                        if(!Analyzer.isSameOrChild(ext, arg, formal)) {
+                           unwrapAt(root.getChildren().get(2), cname, i);
+                           arg = getNodeType(root.getChildren().get(2), cname, i, true);
+                           if(!Analyzer.isSameOrChild(ext, arg, formal))
+                              throw new Exception(root.getChildren().get(2).getChildren().get(i).getProp("line") + ":" + root.getChildren().get(2).getChildren().get(i).getProp("col") +
+                                       ": semantics error expected type " + formal + " but got " + arg + " for argument " + (i+1) + " of method " + root.getChildren().get(1).getValue());
+                        }
                      }
                   }
                }
@@ -590,7 +599,7 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error while condition must be bool");
                break;
             case "let":
-               if(ext.get(getNodeType(root, cname, 1, false)) == null)
+               if(ext.get(Analyzer.basicType(getNodeType(root, cname, 1, false))) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, 1, false));
                //Check in the assign part of the "let"
                if(root.getChildren().size() > 3 && Character.isUpperCase(getNodeType(root, cname, 1, false).charAt(0)))
@@ -671,7 +680,7 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown super class " + root.getChildren().get(1).getValue().toString());
                root.getChildren().get(0).addProp("type", root.getChildren().get(0).getValue().toString());
                //Put "self" everywhere in this class
-               root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0), -1, ScopeItem.PRIVATE));
+               root.scope.put(ScopeItem.FIELD, "self", new ScopeItem(ScopeItem.FIELD, root.getChildren().get(0), -1, ScopeItem.PRIVATE));
                //Check for extends-loop
                if(Analyzer.isSameOrChild(ext, root.getChildren().get(1).getValue().toString(), root.getChildren().get(0).getValue().toString()))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " defines an extends-loop");
@@ -722,7 +731,7 @@ public class Analyzer {
             if(root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).itype == SymbolValue.TYPE_IDENTIFIER &&
                      root.scope.get(ScopeItem.CLASS, root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue().toString()) == null)
                throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown return type " +
-                        root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue() + "for method");
+                        root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue() + " for method");
          } else {
             if(root.stype.equals("field")) {
                //Check override higher only
@@ -740,7 +749,7 @@ public class Analyzer {
             switch(root.stype) {
                case "formal":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, ScopeItem.PRIVATE), 2);
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1), level, ScopeItem.PRIVATE), 2);
                   //Register the type because this is not acquired bottom-up while cross checking
                   root.addProp("type", getNodeType(root, cname, 1, false));
                   if(ext.get(getNodeType(root, cname, 1, false)) == null)
@@ -750,13 +759,28 @@ public class Analyzer {
                   break;
                case "field":
                   root.scope.putAbove(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level,
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1), level,
                                     extd? ScopeItem.fromSymbol((Symbol)root.getProp("visi")) : ScopeItem.PRIVATE), 1);
                   break;
                case "let":
+                  //If we turned a "for" into a "let", we need to check the generated array type
+                  if(root.getChildren().get(0).getProp("type").equals(Analyzer.EMPTY) && root.getChildren().get(0).getValue().equals("__arr")) {
+                     regScope(root.getChildren().get(2).getChildren().get(2).getChildren().get(0).getChildren().get(1), root, cname, level + 3);
+                     root.addProp("fromfor", true);
+                     root.getChildren().get(2).addProp("fromfor", true);
+                     type = Analyzer.lastTokens(root, getNodeType(root.getChildren().get(2).getChildren().get(2).getChildren().get(0), cname, 1, false),
+                              new ASTNode("dummy", null));
+                     root.getChildren().set(1, new ASTNode(SymbolValue.TYPE_IDENTIFIER, type).addProp("type", type));
+                     root.getChildren().get(0).addProp("type", type);
+                     type = Analyzer.lastTokens(root, getNodeType(root.getChildren().get(2).getChildren().get(2).getChildren().get(0), cname, 1, false),
+                              new ASTNode("deref", null).addChild(null).addChild(new ASTNode("dummy", null)));
+                     root.getChildren().get(2).getChildren().set(1, new ASTNode(SymbolValue.TYPE_IDENTIFIER, type).addProp("type", type));
+                     root.getChildren().get(2).getChildren().get(0).addProp("type", type);
+                  }
                   root.scope.put(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
-                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1).itype, root.getChildren().get(1), level, ScopeItem.PRIVATE));
-                  if(root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
+                           new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1), level, ScopeItem.PRIVATE));
+                  //Make sure this is a user defined "let", not from a changed "for".
+                  if(root.getProp("fromfor") == null && root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
                            ext.get(root.getChildren().get(1).getValue().toString()) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " +
                            root.getChildren().get(1).getValue() + " for declared variable");
@@ -826,7 +850,6 @@ public class Analyzer {
          meths = prim.get(scope.getChildren().get(0).getValue().toString());
          has = root.getChildren().get(1).stype.equals("formals");
          si = new ScopeItem(ScopeItem.METHOD,
-               has? root.getChildren().get(2).itype : root.getChildren().get(1).itype,
                has? root.getChildren().get(2) : root.getChildren().get(1),
                has? root.getChildren().get(1) : null, 3, extd? ScopeItem.fromSymbol((Symbol)root.getProp("visi")) : ScopeItem.PUBLIC);
          if(meths.containsKey(root.getChildren().get(0).getValue().toString()))
@@ -848,8 +871,7 @@ public class Analyzer {
             m.addChild(root.getChildren().get(1).clone());
             m.addChild(new ASTNode("block", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, root.getChildren().get(0).getValue())));
             m.addProp("type", root.getChildren().get(1).getProp("type"));
-            prim.get(type).put(get, new ScopeItem(ScopeItem.METHOD, m.getChildren().get(1).itype, m.getChildren().get(1),
-                    null, 3, ScopeItem.PUBLIC));
+            prim.get(type).put(get, new ScopeItem(ScopeItem.METHOD, m.getChildren().get(1), null, 3, ScopeItem.PUBLIC));
             add.add(m);
             //setter
             m = new ASTNode("method", null);
@@ -863,8 +885,7 @@ public class Analyzer {
                     new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__set")))
                     .addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "self")));
             m.addProp("type", type);
-            prim.get(type).put(set, new ScopeItem(ScopeItem.METHOD, m.getChildren().get(2).itype, m.getChildren().get(2),
-                    m.getChildren().get(1), 3, ScopeItem.PUBLIC));
+            prim.get(type).put(set, new ScopeItem(ScopeItem.METHOD, m.getChildren().get(2), m.getChildren().get(1), 3, ScopeItem.PUBLIC));
             add.add(m);
             return add;
          }

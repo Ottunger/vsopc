@@ -98,6 +98,7 @@ DecIntegerLiteral = [0-9]+
    "then"/{AfterToken} { return symbol(SymbolValue.THEN); }
    "true"/{AfterToken} { return symbol(SymbolValue.TRUE); }
    "while"/{AfterToken} { return symbol(SymbolValue.WHILE); }
+   "for"/{AfterToken} { return symbol(SymbolValue.FOR); }
    "null"/{AfterToken} { return symbol(SymbolValue.NULL); }
    "unit"/{AfterToken} { return symbol(SymbolValue.UNIT); }
    "or"/{AfterToken} { return symbol(SymbolValue.OR); }

@@ -17,7 +17,7 @@ public class ScopeItem {
    public static final char PRIVATE = 2;
    
    public char sh;
-   public int type, stype, level;
+   public int type, level;
    public ASTNode userType, formals;
    
    /**
@@ -28,7 +28,6 @@ public class ScopeItem {
     */
    public ScopeItem(int type, ASTNode userType, int level) {
       this.type = type;
-      this.stype = 0;
       this.level = level;
       this.userType = userType;
       this.formals = null;
@@ -43,9 +42,8 @@ public class ScopeItem {
     * @param level Level at which was reg'd.
     * @param sh Is public.
     */
-   public ScopeItem(int type, int stype, ASTNode userType, int level, char sh) {
+   public ScopeItem(int type, ASTNode userType, int level, char sh) {
       this.type = type;
-      this.stype = stype;
       this.level = level;
       this.userType = userType;
       this.formals = null;
@@ -55,15 +53,13 @@ public class ScopeItem {
    /**
     * Creates a ScopeItem.
     * @param type Type.
-    * @param stype Sub type.
     * @param userType Definition of custom type if uses so.
     * @param formals Definition of expected arguments.
     * @param level Level at which was reg'd.
     * @param sh Is public.
     */
-   public ScopeItem(int type, int stype, ASTNode userType, ASTNode formals, int level, char sh) {
+   public ScopeItem(int type, ASTNode userType, ASTNode formals, int level, char sh) {
       this.type = type;
-      this.stype = stype;
       this.level = level;
       this.userType = userType;
       this.formals = formals;

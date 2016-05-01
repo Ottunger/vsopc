@@ -376,7 +376,7 @@ public class ASTNode implements Cloneable {
                break;
             case "let":
                idx = 2;
-               System.out.print("Let(" + children.get(0).value + ", " + ASTNode.typeValue(children.get(1)));
+               System.out.print("Let(" + children.get(0).value + ", " + (children.get(1) == null? "???" : ASTNode.typeValue(children.get(1))));
                if(children.size() > 3) {
                   idx = 3;
                   System.out.print(", ");

@@ -16,6 +16,7 @@ public class SymbolValue {
   public static final int UNIT = 42;
   public static final int LOWER = 33;
   public static final int GREATER = 44;
+  public static final int FOR = 54;
   public static final int MINUS = 28;
   public static final int TILDE = 52;
   public static final int NOT = 15;
@@ -116,7 +117,8 @@ public class SymbolValue {
   "LBRK",
   "RBRK",
   "TILDE",
-  "INCLUDE"
+  "INCLUDE",
+  "FOR"
   };
 }
 

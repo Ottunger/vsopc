@@ -7,6 +7,7 @@ import be.ac.ulg.vsop.lexer.Symbol;
 import be.ac.ulg.vsop.parser.SymbolValue;
 import be.ac.ulg.vsop.parser.ASTNode;
 import be.ac.ulg.vsop.parser.Parser;
+import be.ac.ulg.vsop.analyzer.Analyzer;
 
 /* Overrides */
 parser code {:
@@ -29,7 +30,7 @@ terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
 terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL;
-terminal Symbol SWITCH, LBRK, RBRK, TILDE, INCLUDE; /* Extensions */
+terminal Symbol SWITCH, LBRK, RBRK, TILDE, INCLUDE, FOR; /* Extensions */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
@@ -76,7 +77,7 @@ lit ::= INTEGER_LITERAL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col
       | STRING_LITERAL:t  {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING_LITERAL, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); :}
       | TRUE:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.TRUE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "bool"); :}
       | FALSE:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FALSE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "bool"); :}
-      | NULL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.NULL, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "object"); :};
+      | NULL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.NULL, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "Object"); :};
 
 program ::= class_all:t program:c {: c.pushChild(t); t.shuffleClass(); RESULT = c; :}
           | class_all:t {: RESULT = new ASTNode("program", null); RESULT.addChild(t); t.shuffleClass(); :}
@@ -117,6 +118,7 @@ args_full ::= expression:e COMMA args_full:b {: RESULT = b; b.pushChild(e); :}
 expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", null); RESULT.addChild(e); RESULT.addChild(f); :}
              | IF expression:e THEN expression:f ELSE expression:g {: RESULT = new ASTNode("if", null); RESULT.addChild(e); RESULT.addChild(f); RESULT.addChild(g); :}
              | WHILE expression:e DO expression:f {: RESULT = new ASTNode("while", null); RESULT.addChild(e); RESULT.addChild(f); :}
+             | FOR OBJECT_IDENTIFIER:o COLON expression:e COLON expression:f DO expression:g {: RESULT = new ASTNode("let", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__arr").addProp("line", o.line + "").addProp("col", o.col + "").addProp("type", Analyzer.EMPTY)).addChild(null).addChild(new ASTNode("let", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val).addProp("type", Analyzer.EMPTY)).addChild(null).addChild(new ASTNode("block", null).addChild(new ASTNode("assign", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__arr")).addChild(e)).addChild(new ASTNode("let", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__i").addProp("type", "int32")).addChild(new ASTNode(SymbolValue.INT32, null).addProp("type", "int32")).addChild(new ASTNode("while", null).addChild(new ASTNode(SymbolValue.NOT, null).addChild(new ASTNode(SymbolValue.EQUAL, null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__i")).addChild(f.clone()))).addChild(new ASTNode("block", null).addChild(new ASTNode("assign", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val)).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__arr").addChild(new ASTNode("deref", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__i")).addChild(new ASTNode("dummy", null))))).addChild(g).addChild(new ASTNode("assign", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__i")).addChild(new ASTNode(SymbolValue.PLUS, null).addChild(new ASTNode(SymbolValue.INTEGER_LITERAL, 1).addProp("type", "int32")).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__i"))))))))); :}
              | LET OBJECT_IDENTIFIER:o COLON types:t may_assign:m IN expression:e {: RESULT = new ASTNode("let", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); if(m != null) RESULT.addChild(m); RESULT.addChild(e); :}
              | expression:e DOT OBJECT_IDENTIFIER:o deref:d assign:m {: RESULT = new ASTNode("assign", null); ASTNode c1 = new ASTNode("fieldget", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); c1.addProp("col", e.getProp("col")); c1.addProp("line", e.getProp("line")); c1.addChild(e); c1.addChild(a); RESULT.addChild(c1); RESULT.addChild(m); RESULT.addChild(d); :}
              | expression:e DOT OBJECT_IDENTIFIER:o assign:m {: RESULT = new ASTNode("assign", null); ASTNode c1 = new ASTNode("fieldget", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); c1.addProp("col", e.getProp("col")); c1.addProp("line", e.getProp("line")); c1.addChild(e); c1.addChild(a); RESULT.addChild(c1); RESULT.addChild(m); :}
@@ -144,6 +146,7 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | NEW types:t deref:d {: RESULT = new ASTNode(SymbolValue.NEW, null); RESULT.addChild(t); RESULT.addChild(d); :}
              | NEW simtypes:t deref:d {: RESULT = new ASTNode(SymbolValue.NEW, null); RESULT.addChild(t); RESULT.addChild(d); :}
              | NEW simtypes:t {: RESULT = new ASTNode(SymbolValue.NEW, null); RESULT.addChild(t); :}
+             | NEW simtypes:t LPAR args:m RPAR {: RESULT = new ASTNode("call", null); ASTNode b = new ASTNode(SymbolValue.NEW, null); b.addChild(t); b.addProp("line", t.getProp("line")); b.addProp("col", t.getProp("col")); RESULT.addChild(b); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "init"); a.addProp("line", m.getProp("line")); a.addProp("col", m.getProp("col")); RESULT.addChild(a); if(m != null) RESULT.addChild(m); :}
              | OBJECT_IDENTIFIER:o {: RESULT = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); RESULT.addProp("line", o.line + ""); RESULT.addProp("col", o.col + ""); :}
              | OBJECT_IDENTIFIER:o deref:d {: RESULT = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); RESULT.addProp("line", o.line + ""); RESULT.addProp("col", o.col + ""); RESULT.addChild(d); :}
              | expression:e DOT OBJECT_IDENTIFIER:o {: RESULT = new ASTNode("fieldget", null); ASTNode c2 = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); c2.addProp("line", o.line + ""); c2.addProp("col", o.col + ""); RESULT.addProp("line", e.getProp("line")); RESULT.addProp("col", e.getProp("col")); RESULT.addChild(e); RESULT.addChild(c2); :}
