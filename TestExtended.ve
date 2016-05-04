@@ -35,6 +35,10 @@ class UseArray {
    +get(i : int32, j : int32) : int32 {
       arr[i][j]
    }
+   +sum(i1 : int32, j1 : int32, i2 : int32, j2 : int32) : int32 {
+      let a : int32 <- arr[i1][j1], b : int32 <- arr[i2][j2] in
+         a + b
+   }
 }
 
 class Main extends IO {

@@ -766,8 +766,6 @@ public class Analyzer {
                   //If we turned a "for" into a "let", we need to check the generated array type
                   if(root.getChildren().get(0).getProp("type").equals(Analyzer.EMPTY) && root.getChildren().get(0).getValue().equals("__arr")) {
                      regScope(root.getChildren().get(2).getChildren().get(2).getChildren().get(0).getChildren().get(1), root, cname, level + 3);
-                     root.addProp("fromfor", true);
-                     root.getChildren().get(2).addProp("fromfor", true);
                      type = Analyzer.lastTokens(root, getNodeType(root.getChildren().get(2).getChildren().get(2).getChildren().get(0), cname, 1, false),
                               new ASTNode("dummy", null));
                      root.getChildren().set(1, new ASTNode(SymbolValue.TYPE_IDENTIFIER, type).addProp("type", type));
@@ -779,9 +777,9 @@ public class Analyzer {
                   }
                   root.scope.put(ScopeItem.FIELD, root.getChildren().get(0).getValue().toString(),
                            new ScopeItem(ScopeItem.FIELD, root.getChildren().get(1), level, ScopeItem.PRIVATE));
-                  //Make sure this is a user defined "let", not from a changed "for".
-                  if(root.getProp("fromfor") == null && root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
-                           ext.get(root.getChildren().get(1).getValue().toString()) == null)
+                  //Make sure the type declared is array or plain of known.
+                  if(root.getChildren().get(1).itype == SymbolValue.TYPE_IDENTIFIER &&
+                           ext.get(Analyzer.basicType(root.getChildren().get(1).getValue().toString())) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " +
                            root.getChildren().get(1).getValue() + " for declared variable");
                   break;
