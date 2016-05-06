@@ -393,6 +393,7 @@ public class CGen {
             case SymbolValue.FALSE:
             case SymbolValue.TRUE:
             case SymbolValue.UNIT_VALUE:
+            case SymbolValue.NULL:
                imapping.get(cname + "_" + mname).put(root, "_inst__" + CGen.randomString());
                itypes.get(cname + "_" + mname).put(root, CGen.localType(root.getProp("type").toString()));
                break;
@@ -622,8 +623,8 @@ public class CGen {
                   c.initb += (imapping.get(cname + "_" + null).get(root.getChildren().get(2)) + "; ").length();
                } else {
                   //Unitialized!
-                  sb.insert(c.initb, "self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString()));
-                  shift = ("self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString())).length();
+                  sb.insert(c.initb, "self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString(), true));
+                  shift = ("self->" + getDefaultForType(root.getChildren().get(0).getValue().toString(), root.getChildren().get(1).getProp("type").toString(), true)).length();
                   c.initb += shift;
                }
                //All classes defined after us must shift were to insert
@@ -643,8 +644,9 @@ public class CGen {
     * Returns the default value for a type.
     * @param field The field to initialize.
     * @param type The type.
+    * @param rself True if a self enclosed string.
     */
-   private String getDefaultForType(String field, String type) {
+   private String getDefaultForType(String field, String type, boolean rself) {
       switch (type) {
          case "int32":
             return field + " = 0; ";
@@ -653,7 +655,7 @@ public class CGen {
          case "bool":
             return field + " = 0; ";
          case "string":
-            return field + " = GC_MALLOC(sizeof(char)); " + field + "[0] = 0; "; 
+            return field + " = GC_MALLOC(sizeof(char)); " + (rself? "self->" : "") + field + "[0] = 0; "; 
          case "unit":
             return field + " = 0; ";
          default:
@@ -734,7 +736,7 @@ public class CGen {
             sb.append(tmp + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(2)) + ";");
          } else {
             //Unitialized!
-            sb.append(getDefaultForType(tmp, root.getChildren().get(1).getProp("type").toString()));
+            sb.append(getDefaultForType(tmp, root.getChildren().get(1).getProp("type").toString(), false));
          }
          //Build the body
          buildBody(root, cname, mname, root.getChildren().get(has? 3 : 2), nlets + 1);
