@@ -77,22 +77,25 @@ public class CGen {
       cdef = new ArrayList<String>();
       
       //Create pow function, for pow in VSOP
-      sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n");
+      sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
       aft = sb.length();
       sb.append("int __pow(int a, int b); int __pow(int a, int b)"
                + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       sb.append("float __powf(float a, int b); float __powf(float a, int b)"
                + "{if(b == 0) return 1.0f; if(b == 1) return a; float rec = __powf(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       //Define Object_struct. What did you expect?
-      sb.append("typedef void Object_struct; ");
+      sb.append("typedef struct Object_vtable Object_vtable; typedef struct Object_struct {Object_vtable* _vtable;} Object_struct; char Object_equals(Object_struct*,"
+               + "Object_struct*); struct Object_vtable {char (*equals)(Object_struct*, Object_struct*);}; Object_vtable Object_static_vtable = "
+               + "{Object_equals}; Object_struct* Object_init__(Object_struct* self) {self->_vtable = &Object_static_vtable; return self;}"
+               + "char Object_equals(Object_struct* a, Object_struct *b) {return a == b;}");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
                + "IO_struct* IO_printInt(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); IO_struct* IO_printBool(IO_struct*, char);"
                + "char* IO_inputLine(IO_struct*); int IO_inputInt(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);"
-               + "struct IO_vtable {IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int); IO_struct* (*printFloat)(IO_struct*, float);"
-               + "IO_struct* (*printBool)(IO_struct*, char); char* (*inputLine)(IO_struct*); int (*inputInt)(IO_struct*); float (*inputFloat)(IO_struct*);"
-               + "char (*inputBool)(IO_struct*);}; IO_vtable IO_static_vtable = {IO_print, IO_printInt, IO_printFloat, IO_printBool, IO_inputLine, IO_inputInt,"
-               + "IO_inputFloat, IO_inputBool}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
+               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int);"
+               + "IO_struct* (*printFloat)(IO_struct*, float); IO_struct* (*printBool)(IO_struct*, char); char* (*inputLine)(IO_struct*); int (*inputInt)(IO_struct*);"
+               + "float (*inputFloat)(IO_struct*); char (*inputBool)(IO_struct*);}; IO_vtable IO_static_vtable = {Object_equals, IO_print, IO_printInt, IO_printFloat,"
+               + "IO_printBool, IO_inputLine, IO_inputInt, IO_inputFloat, IO_inputBool}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
                + "IO_struct* IO_print(IO_struct* self, char* str) {printf(\"%s\", str); return self;}"
                + "IO_struct* IO_printInt(IO_struct* self, int num) {printf(\"%d\", num); return self;}"
                + "IO_struct* IO_printFloat(IO_struct* self, float num) {printf(\"%f\", num); return self;}"
@@ -112,8 +115,12 @@ public class CGen {
       //From a third pass, generate the list of all intermediate variable for each
       //instruction, to build them later on.
       registerInsts(null, ast, null, null);
+      //Add the special String_equals method that is defined by ourselves
+      if(extd) {
+         sb.append("char String_equals(String_struct* a, Object_struct* b) {return strcmp(a->value, ((String_struct*) b)->value) == 0;}");
+      }
       //From a fourth pass, generate the methods that are functions that have a pointer *self
-      //Third pass is actually deeper in first pass
+      //Fourth pass is actually deeper in first pass
       genStructures(ast, true, true);
       
       //Create global strings constants.
@@ -185,14 +192,16 @@ public class CGen {
     * @param pass Reached classes.
     * @param second Second pass.
     */
+   @SuppressWarnings("unchecked")
    private void genStructures(ASTNode root, boolean pass, boolean second) {
       String type = "", upper = "";
-      ASTNode vclass;
+      ASTNode a, vclass;
       ArrayList<String> fields, types;
       ArrayList<String> methods;
       ArrayList<CSignature> sigs;
       Stack<ASTNode> msee;
       Stack<String> rlabel;
+      HashMap<String, HashMap<String, ScopeItem>> prim;
       
       if(!second && root.ending) {
          switch(root.itype) {
@@ -236,8 +245,21 @@ public class CGen {
                   rlabel = new Stack<String>();
                   do {
                      vclass = ast.scope.get(ScopeItem.CLASS, type).userType;
-                     if(vclass.getChildren().size() > 2) {
-                        for(ASTNode a : vclass.getChildren()) {
+                     if(vclass.getChildren().size() > 1) {
+                        for(ASTNode at : vclass.getChildren()) {
+                           msee.push(at);
+                           rlabel.push(type);
+                        }
+                     } else {
+                        //This is a self defined class, Object, IO, ...
+                        prim = (HashMap<String, HashMap<String, ScopeItem>>) vclass.getProp("prim");
+                        for(Map.Entry<String, ScopeItem> entry : prim.get(type).entrySet())  {
+                           a = new ASTNode("method", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, entry.getKey()))
+                                    .addProp("type", entry.getValue().userType.getProp("type"));
+                           if(entry.getValue().formals != null)
+                              a.addChild(entry.getValue().formals);
+                           else
+                              a.addChild(new ASTNode("dummy", null));
                            msee.push(a);
                            rlabel.push(type);
                         }
@@ -245,7 +267,7 @@ public class CGen {
                   } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
                   type = root.getChildren().get(0).getValue().toString();
                   while(!msee.isEmpty()) {
-                     ASTNode a = msee.pop();
+                     a = msee.pop();
                      String from = rlabel.pop();
                      if(type.equals(from)) {
                         tryAddSig(a, type, methods, sigs, true, false);
@@ -253,14 +275,8 @@ public class CGen {
                         tryAddSig(a, type, methods, sigs, false, false);
                      }
                   }
-                  //vtable definition and one static instance
+                  //_vtable definition and one static instance
                   sb.append("struct " + type + "_vtable {");
-                  //Add IO methods if derived from it
-                  if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_struct* (*print)(" + type + "_struct*, char*); IO_struct* (*printInt)(" + type + "_struct*, int);"
-                              + "IO_struct* (*printFloat)(" + type + "_struct*, float); IO_struct* (*printBool)(" + type + "_struct*, char);"
-                              + "char* (*inputLine)(" + type + "_struct*); int (*inputInt)(" + type + "_struct*);"
-                              + "float (*inputFloat)(" + type + "_struct*); char (*inputBool)(" + type + "_struct*);");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      sb.append(sigs.get(i).ret + " (*" + methods.get(i) + ")(");
@@ -274,16 +290,20 @@ public class CGen {
                   sb.append("}; ");
                   //Create the static instance
                   sb.append(type + "_vtable " + type + "_static_vtable = {");
-                  //Add IO methods if derived from it
-                  if(Analyzer.isSameOrChild(ext, type, "IO"))
-                     sb.append("IO_print,IO_printInt,IO_printFloat,IO_printBool,IO_inputLine,IO_inputInt,IO_inputFloat,IO_inputBool,");
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      do {
                         vclass = ast.scope.get(ScopeItem.CLASS, type).userType;
                         if(vclass.scope.methodSet().contains(methods.get(i))) {
-                           upper = vclass.getChildren().get(0).getValue().toString();
+                           upper = type;
                            break;
+                        } else {
+                           //This may be a self defined class, Object, IO, ...
+                           prim = (HashMap<String, HashMap<String, ScopeItem>>) vclass.getProp("prim");
+                           if(prim != null && prim.get(type).containsKey(methods.get(i))) {
+                              upper = type;
+                              break;
+                           }
                         }
                      } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
                      type = root.getChildren().get(0).getValue().toString();
@@ -571,6 +591,9 @@ public class CGen {
          c = (CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cname);
          switch(root.stype) {
             case "method":
+               //Do not build String_equals
+               if(cname.equals("String") && root.getChildren().get(0).getValue().toString().equals("equals"))
+                  break;
                //When the first method is met, we have written all fields push theit instruction savers.
                if(c.inits != 0) {
                   //Now add local defined by instruction variables.

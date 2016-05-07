@@ -23,6 +23,11 @@ class Float {
 
 class String {
    -+value : string;
+   
+   +equals(b : Object) : bool {
+      //This is actually never evaluated, replaced by compiler
+      false
+   }
 }
 
 class ArrayDebug extends IO {

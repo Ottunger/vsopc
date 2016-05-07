@@ -42,54 +42,41 @@ public class Analyzer {
       prim.put("bool", new HashMap<String, ScopeItem>());
       prim.put("unit", new HashMap<String, ScopeItem>());
       prim.put("IO", new HashMap<String, ScopeItem>());
-      //Rgister the methods of the well known IO class
+      //Register the methods of the well known Object class
+      //Method equals
+      if(extd) {
+         fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "b")).addProp("type", "Object"));
+         tmp = new ASTNode("block", null).addProp("type", "bool");
+         prim.get("Object").put("equals", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
+      }
+      //Register the methods of the well known IO class
       //Method print
-      fms = new ASTNode("formals", null);
-      tmp = new ASTNode("formal", null);
-      tmp.addProp("type", "string");
-      fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "IO");
+      fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "str")).addProp("type", "string"));
+      tmp = new ASTNode("block", null).addProp("type", "IO");
       prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printInt
-      fms = new ASTNode("formals", null);
-      tmp = new ASTNode("formal", null);
-      tmp.addProp("type", "int32");
-      fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "IO");
+      fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "num")).addProp("type", "int32"));
+      tmp = new ASTNode("block", null).addProp("type", "IO");
       prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printFloat
-      fms = new ASTNode("formals", null);
-      tmp = new ASTNode("formal", null);
-      tmp.addProp("type", "float");
-      fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "IO");
+      fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "num")).addProp("type", "float"));
+      tmp = new ASTNode("block", null).addProp("type", "IO");
       prim.get("IO").put("printFloat", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printBool
-      fms = new ASTNode("formals", null);
-      tmp = new ASTNode("formal", null);
-      tmp.addProp("type", "bool");
-      fms.getChildren().add(0, tmp);
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "IO");
+      fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "bool")).addProp("type", "bool"));
+      tmp = new ASTNode("block", null).addProp("type", "IO");
       prim.get("IO").put("printBool", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method inputLine
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "string");
+      tmp = new ASTNode("block", null).addProp("type", "string");
       prim.get("IO").put("inputLine", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputInt
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "int32");
+      tmp = new ASTNode("block", null).addProp("type", "int32");
       prim.get("IO").put("inputInt", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputFloat
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "float");
+      tmp = new ASTNode("block", null).addProp("type", "float");
       prim.get("IO").put("inputFloat", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputBool
-      tmp = new ASTNode("block", null);
-      tmp.addProp("type", "bool");
+      tmp = new ASTNode("block", null).addProp("type", "bool");
       prim.get("IO").put("inputBool", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
    }
    
@@ -108,13 +95,15 @@ public class Analyzer {
     */
    public void regScope(ASTNode root) throws Exception {
       ScopeItem si;
-      root.scope.put(ScopeItem.CLASS, "Object", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "Object"), 0));
+      //At the same time, register the primaries for classes defined by themselves
+      root.scope.put(ScopeItem.CLASS, "Object", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "Object").addProp("prim", prim), 0));
       root.scope.put(ScopeItem.CLASS, "string", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "string"), 0));
       root.scope.put(ScopeItem.CLASS, "float", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "float"), 0));
       root.scope.put(ScopeItem.CLASS, "int32", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "int32"), 0));
       root.scope.put(ScopeItem.CLASS, "bool", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "bool"), 0));
       root.scope.put(ScopeItem.CLASS, "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
-      root.scope.put(ScopeItem.CLASS, "IO", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "IO"), 0));
+      root.scope.put(ScopeItem.CLASS, "IO", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "IO").addProp("prim", prim), 0));
+      
       //Register all classes top domain
       regClasses(root, true);
       //Register scopes
@@ -914,11 +903,12 @@ public class Analyzer {
             //Check same return & same formals at both ends, otherwise bad override
             if(!getNodeType(root, n, has? 2 : 1, true).equals(getNodeType(t.userType, n, -1, true)))
                return false;
-            if(((root.getChildren().size() == 3) != (t.formals == null)) || (has && t.formals != null && root.getChildren().get(2).getChildren().size() != t.formals.getChildren().size())) {
+            if(((root.getChildren().size() == 3) != (t.formals == null)) ||
+                     (has && t.formals != null && root.getChildren().get(1).getChildren().size() != t.formals.getChildren().size())) {
                return true;
             } else if(has) {
-               for(int i = 0; i < root.getChildren().get(2).getChildren().size(); i++) {
-                  String arg = getNodeType(root.getChildren().get(2), n, i, true);
+               for(int i = 0; i < root.getChildren().get(1).getChildren().size(); i++) {
+                  String arg = getNodeType(root.getChildren().get(1), n, i, true);
                   String formal = getNodeType(t.formals, n, i, true);
                   if(!Analyzer.isSameOrChild(ext, arg, formal))
                      return true;

@@ -1224,7 +1224,7 @@ class CUP$VSOPExtendedParser$actions {
 		int tleft = ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.peek()).left;
 		int tright = ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.peek()).right;
 		ASTNode t = (ASTNode)((java_cup.runtime.Symbol) CUP$VSOPExtendedParser$stack.peek()).value;
-		 RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); 
+		 RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); 
               CUP$VSOPExtendedParser$result = parser.getSymbolFactory().newSymbol("formal",11, ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.elementAt(CUP$VSOPExtendedParser$top-2)), ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.peek()), RESULT);
             }
           return CUP$VSOPExtendedParser$result;
@@ -1242,7 +1242,7 @@ class CUP$VSOPExtendedParser$actions {
 		int lleft = ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.peek()).left;
 		int lright = ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.peek()).right;
 		ASTNode l = (ASTNode)((java_cup.runtime.Symbol) CUP$VSOPExtendedParser$stack.peek()).value;
-		 RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); RESULT.addChild(l); 
+		 RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); RESULT.addChild(l); 
               CUP$VSOPExtendedParser$result = parser.getSymbolFactory().newSymbol("formal",11, ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.elementAt(CUP$VSOPExtendedParser$top-4)), ((java_cup.runtime.Symbol)CUP$VSOPExtendedParser$stack.peek()), RESULT);
             }
           return CUP$VSOPExtendedParser$result;
