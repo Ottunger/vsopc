@@ -117,7 +117,11 @@ public class CGen {
       registerInsts(null, ast, null, null);
       //Add the special String_equals method that is defined by ourselves
       if(extd) {
-         sb.append("char String_equals(String_struct* a, Object_struct* b) {return strcmp(a->value, ((String_struct*) b)->value) == 0;}");
+         sb.append("char String_equals(String_struct* self, Object_struct* b) {return strcmp(self->value, ((String_struct*) b)->value) == 0;}");
+         sb.append("int String_size(String_struct* self) {return strlen(self->value);}");
+         sb.append("String_struct* String_a(String_struct* self, char* s) {int slen = strlen(s); if(self->rsize <= self->len + slen) { self->rsize = "
+                  + "2*(self->len + slen) + 1; self->value = GC_REALLOC(self->value, self->rsize);} strcat(self->value, s); return self;}");
+         sb.append("int String_asciiAt(String_struct* self, int i) {return (int)self->value[i];}");
       }
       //From a fourth pass, generate the methods that are functions that have a pointer *self
       //Fourth pass is actually deeper in first pass
@@ -582,6 +586,7 @@ public class CGen {
     * @param root Where we are.
     */
    private void genFunctions(String cname, ASTNode root) {
+      boolean leave;
       int shift = 0, j;
       String mname;
       StringBuilder save, tmp;
@@ -591,9 +596,22 @@ public class CGen {
          c = (CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cname);
          switch(root.stype) {
             case "method":
-               //Do not build String_equals
-               if(cname.equals("String") && root.getChildren().get(0).getValue().toString().equals("equals"))
-                  break;
+               //Do not build String_equals and other natives
+               if(cname.equals("String")) {
+                  switch(root.getChildren().get(0).getValue().toString()) {
+                     case "equals":
+                     case "size":
+                     case "a":
+                     case "asciiAt":
+                        leave = true;
+                        break;
+                     default:
+                        leave = false;
+                        break;
+                  }
+                  if(leave)
+                     break;
+               }
                //When the first method is met, we have written all fields push theit instruction savers.
                if(c.inits != 0) {
                   //Now add local defined by instruction variables.

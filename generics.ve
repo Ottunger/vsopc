@@ -1,19 +1,39 @@
 class Unit {
    -+value : unit;
+   
+   +equals(b : Object) : bool {
+      true
+   }
 }
 
 class Bool {
    -+value : bool;
+   
+   +equals(b : Object) : bool {
+      let b2 : Bool <- b<Bool> in
+         if value = b2.value then
+            true
+         else
+            false
+   }
 }
 
 class Integer {
    -+value : int32;
    
    +toBool() : bool {
-      if(value = 0) then
+      if value = 0 then
          false
       else
          true
+   }
+   
+   +equals(b : Object) : bool {
+      let b2 : Integer <- b<Integer> in
+         if value = b2.value then
+            true
+         else
+            false
    }
 }
 
@@ -22,19 +42,55 @@ class Float {
 }
 
 class String {
-   -+value : string;
+   -len : int32;
+   -rsize : int32;
+   -value : string;
+   
+   +getValue() : string { value }
+   
+   +setValue(s : string) : String {
+      value <- s;
+      len <- size();
+      rsize <- len;
+      self
+   }
    
    +equals(b : Object) : bool {
       //This is actually never evaluated, replaced by compiler
       false
    }
+   
+   -size() : int32 {
+      //This is actually never evaluated, replaced by compiler
+      0
+   }
+   
+   +a(s : string) : String {
+      //This is actually never evaluated, replaced by compiler
+      self
+   }
+   
+   +asciiAt(i : int32) : int32 {
+      //This is actually never evaluated, replaced by compiler
+      0
+   }
+   
+   +length() : int32 {
+      len
+   }
+   
 }
 
-class ArrayDebug extends IO {
+class Task {
+   +run(o : Object) : unit { () }
+   +accept(o : Object) : bool { true }
+}
+
+class Array extends IO {
    -len : int32;
    -values : Object[];
    
-   +init(l : int32) : ArrayDebug {
+   +init(l : int32) : Array {
       len <- l;
       values <- new Object[len];
       self
@@ -49,7 +105,7 @@ class ArrayDebug extends IO {
       }
    }
    
-   +set(i : int32, o : Object) : ArrayDebug {
+   +set(i : int32, o : Object) : Array {
       if i < len then {
          values[i] <- o;
          ()
@@ -64,7 +120,26 @@ class ArrayDebug extends IO {
       len
    }
    
-   +dumpAsIntArray() : ArrayDebug {
+   +map(t : Task) : unit {
+      for n : values : len do
+         t.run(n);
+      ()
+   }
+   
+   +filter(t : Task) : Array {
+      let r : Array <- new Array(len), w : int32 <- 0 in {
+         for n : values : len do {
+            if t.accept(n) then {
+               r.values[w] <- n;
+               w <- w + 1
+            }
+         };
+         r.len <- w;
+         r
+      }
+   }
+   
+   +dumpAsIntArray() : Array {
       for n : values : len do
          printInt(n<Integer>).print("\n");
       self
