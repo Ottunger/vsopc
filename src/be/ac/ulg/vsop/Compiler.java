@@ -23,7 +23,10 @@ public class Compiler {
     * @param args Arguments.
     */
 	public static void main(String[] args) {
-		int findex = args.length - 1, i;
+		int findex = 0, i;
+		for(i = 0; i < args.length; i++)
+		   if(!args[i].startsWith("-"))
+		      findex = i;
 		boolean ext = ((findex == 1 && args[0].equals("-ext")) || findex == 2 && args[1].equals("-ext"));
 		String f;
 		File ft;
@@ -36,7 +39,7 @@ public class Compiler {
 		//Check given inputs
 		if(args.length < 1) {
 			System.err.println("Not enough params");
-			System.err.println("Usage: java -jar Compiler.jar [-lex | -parse | -check | -c | -llvm | -ext] <source_file>");
+			System.err.println("Usage: java -jar Compiler.jar [-lex | -parse | -check | -c | -llvm | -ext] <source_file> [-ci<c_include> | -cl<c_lib>]*");
 			System.exit(1);
 		}
 		if(!args[findex].endsWith(".vsop") && !args[findex].endsWith(".ve")) {
@@ -121,7 +124,7 @@ public class Compiler {
          System.exit(0);
       }
       
-      CGen gen = new CGen(parser.getRoot(), a.getExt(), ext);
+      CGen gen = new CGen(parser.getRoot(), a.getExt(), ext, args, findex + 1);
       try {
          if(findex > 0 && args[0].equals("-llvm")) {
             gen.emit(System.out, null, CGen.LLVM);

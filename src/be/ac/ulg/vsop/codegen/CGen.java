@@ -25,10 +25,12 @@ public class CGen {
    public final static char C = 'C';
    public final static char EXE = 'E';
    
+   private int where;
    private boolean extd;
    private ASTNode ast;
    private HashMap<String, String> ext, strs;
-   StringBuilder sb;
+   private StringBuilder sb;
+   private String[] args;
    private Set<String> classes;
    private HashMap<String, ArrayList<String>> lets, letstypes;
    private HashMap<String, String> lmapping; //Used for "let"'s definitions of temp variables
@@ -42,10 +44,12 @@ public class CGen {
     * @param ext Inheritances.
     * @param extd Whether to consider VSOPExtended.
     */
-   public CGen(ASTNode root, HashMap<String, String> ext, boolean extd) {
+   public CGen(ASTNode root, HashMap<String, String> ext, boolean extd, String[] args, int where) {
       ast = root;
       this.ext = ext;
       this.extd = extd;
+      this.args = args;
+      this.where = where;
    }
    
    /**
@@ -78,6 +82,10 @@ public class CGen {
       
       //Create pow function, for pow in VSOP
       sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
+      for(int i = where; i < args.length; i++) {
+         if(args[i].startsWith("-ci"))
+            sb.append("#include " + args[i].replaceFirst("-ci", "") + "\n");
+      }
       aft = sb.length();
       sb.append("int __pow(int a, int b); int __pow(int a, int b)"
                + "{if(b == 0) return 1; if(b == 1) return a; int rec = __pow(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
@@ -92,10 +100,11 @@ public class CGen {
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
                + "IO_struct* IO_printInt(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); IO_struct* IO_printBool(IO_struct*, char);"
                + "char* IO_inputLine(IO_struct*); int IO_inputInt(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);"
-               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); IO_struct* (*print)(IO_struct*, char*); IO_struct* (*printInt)(IO_struct*, int);"
-               + "IO_struct* (*printFloat)(IO_struct*, float); IO_struct* (*printBool)(IO_struct*, char); char* (*inputLine)(IO_struct*); int (*inputInt)(IO_struct*);"
-               + "float (*inputFloat)(IO_struct*); char (*inputBool)(IO_struct*);}; IO_vtable IO_static_vtable = {Object_equals, IO_print, IO_printInt, IO_printFloat,"
-               + "IO_printBool, IO_inputLine, IO_inputInt, IO_inputFloat, IO_inputBool}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
+               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); IO_struct* (*printFloat)(IO_struct*, float); int (*inputInt)(IO_struct*);"
+               + "IO_struct* (*printBool)(IO_struct*, char); IO_struct* (*printInt)(IO_struct*, int); char* (*inputLine)(IO_struct*);"
+               + "char (*inputBool)(IO_struct*); IO_struct* (*print)(IO_struct*, char*); float (*inputFloat)(IO_struct*);};"
+               + "IO_vtable IO_static_vtable = {Object_equals, IO_printFloat, IO_inputInt, IO_printBool,"
+               + "IO_printInt, IO_inputLine, IO_inputBool, IO_print, IO_inputFloat}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
                + "IO_struct* IO_print(IO_struct* self, char* str) {printf(\"%s\", str); return self;}"
                + "IO_struct* IO_printInt(IO_struct* self, int num) {printf(\"%d\", num); return self;}"
                + "IO_struct* IO_printFloat(IO_struct* self, float num) {printf(\"%f\", num); return self;}"
@@ -145,8 +154,25 @@ public class CGen {
             file = CGen.randomString();
             temp = new File(file).toPath();
             pb = new ProcessBuilder("clang", "-x", "c", "-Oz", "-o", file, "-S", "-emit-llvm", "-I/usr/local/gc/include", "-");
-         } else
-            pb = new ProcessBuilder("clang", "-x", "c", "-Ofast", "-o", file, "-I/usr/local/gc/include", "-static", "-", "-L/usr/local/gc/lib", "-lgc");
+         } else {
+            ArrayList<String> params = new ArrayList<String>();
+            params.add("clang");
+            params.add("-x");
+            params.add("c");
+            params.add("-Ofast");
+            params.add("-o");
+            params.add(file);
+            params.add("-I/usr/local/gc/include");
+            params.add("-static");
+            params.add("-");
+            params.add("-L/usr/local/gc/lib");
+            params.add("-lgc");
+            for(int i = where; i < args.length; i++) {
+               if(args[i].startsWith("-li"))
+                  params.add(args[i].replaceFirst("-cl", "-l"));
+            }
+            pb = new ProcessBuilder(params);
+         }
          pb.redirectError(new File("/dev/null"));
          pb.redirectOutput(new File("/dev/null"));
          p = pb.start();
@@ -613,7 +639,8 @@ public class CGen {
                   if(leave)
                      break;
                }
-               //When the first method is met, we have written all fields push theit instruction savers.
+               
+               //When the first method is met, we have written all fields push their instruction savers.
                if(c.inits != 0) {
                   //Now add local defined by instruction variables.
                   for(Map.Entry<ASTNode, String> iname : imapping.get(cname + "_" + null).entrySet()) {
@@ -629,22 +656,35 @@ public class CGen {
                   }
                }
                
+               //Now building normal and included methods
                //Start building method
                tryAddSig(root, cname, new ArrayList<String>(), new ArrayList<CSignature>(), true, true);
                sb.deleteCharAt(sb.length() - 1);
                sb.append(" {");
                mname = root.getChildren().get(0).getValue().toString();
-               //Now add local defined by "let"'s variables.
-               for(int i = 0; i < lets.get(cname + "_" + mname).size(); i++) {
-                  sb.append(letstypes.get(cname + "_" + mname).get(i) + " " + lets.get(cname + "_" + mname).get(i) + "; ");
+               //Build External.*_.* from includes
+               if(cname.startsWith("External")) {
+                  sb.append("return " + mname + "(");
+                  if(root.getChildren().size() > 3) {
+                     for(int i = 0; i < root.getChildren().get(1).getChildren().size(); i++) {
+                        sb.append(root.getChildren().get(1).getChildren().get(i).getChildren().get(0).getValue().toString() + ",");
+                     }
+                     sb.deleteCharAt(sb.length() - 1);
+                  }
+                  sb.append(");} ");
+               } else {
+                  //Now add local defined by "let"'s variables.
+                  for(int i = 0; i < lets.get(cname + "_" + mname).size(); i++) {
+                     sb.append(letstypes.get(cname + "_" + mname).get(i) + " " + lets.get(cname + "_" + mname).get(i) + "; ");
+                  }
+                  //Now add local defined by instruction variables.
+                  for(Map.Entry<ASTNode, String> iname : imapping.get(cname + "_" + mname).entrySet()) {
+                     sb.append(itypes.get(cname + "_" + mname).get(iname.getKey()) + " " + iname.getValue() + "; ");
+                  }
+                  //Now build body
+                  buildBody(root, cname, mname, root.getChildren().get(root.getChildren().size() > 3? 3 : 2), 0);
+                  sb.append("return " + imapping.get(cname + "_" + mname).get(root.getChildren().get(root.getChildren().size() > 3? 3 : 2)) + ";} ");
                }
-               //Now add local defined by instruction variables.
-               for(Map.Entry<ASTNode, String> iname : imapping.get(cname + "_" + mname).entrySet()) {
-                  sb.append(itypes.get(cname + "_" + mname).get(iname.getKey()) + " " + iname.getValue() + "; ");
-               }
-               //Now build body
-               buildBody(root, cname, mname, root.getChildren().get(root.getChildren().size() > 3? 3 : 2), 0);
-               sb.append("return " + imapping.get(cname + "_" + mname).get(root.getChildren().get(root.getChildren().size() > 3? 3 : 2)) + ";} ");
                break;
             case "field":
                if(root.getChildren().size() > 2) {
