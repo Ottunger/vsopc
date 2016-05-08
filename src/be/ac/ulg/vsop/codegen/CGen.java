@@ -411,6 +411,7 @@ public class CGen {
             case SymbolValue.ISNULL:
             case SymbolValue.NEW:
             case SymbolValue.ASSIGN:
+            case SymbolValue.ERASE:
             case SymbolValue.INTEGER_LITERAL:
             case SymbolValue.FLOAT_LITERAL:
             case SymbolValue.STRING_LITERAL:
@@ -881,6 +882,10 @@ public class CGen {
                break;
             case SymbolValue.ASSIGN:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
+               break;
+            case SymbolValue.ERASE:
+               sb.append("GC_FREE(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ");");
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (void*)0;");
                break;
             case SymbolValue.INTEGER_LITERAL:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = " + (int)root.getValue() + ";");

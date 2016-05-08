@@ -116,7 +116,7 @@ public class Analyzer {
       if(si.formals != null || !getNodeType(si.userType, "Main", -1, false).equals("int32") || si.sh != ScopeItem.PUBLIC)
          throw new Exception("1:1: semantics error bad main signature, should be \"+main() : int32\"");
       //Check types
-      checkTypes(root, null, root.scope);
+      checkTypes(root, null, null, root.scope);
    }
    
    /**
@@ -298,12 +298,14 @@ public class Analyzer {
    
    /**
     * Checks that the operations involve only ok types, and that a call to a method is indeed to one that exists.
-    * @param root The root of program.
+    * @param root The root examined.
+    * @param parent The parent of root.
     * @param cname Class name.
     * @param scope The root scope.
     * @throws Exception
     */
-   private void checkTypes(ASTNode root, String cname, Scope scope) throws Exception {
+   private void checkTypes(ASTNode root, ASTNode parent, String cname, Scope scope) throws Exception {
+      int iof;
       String type;
       ScopeItem s, t;
       HashMap<String, ScopeItem> meths;
@@ -314,7 +316,7 @@ public class Analyzer {
       }
       
       for(ASTNode r : root.getChildren()) {
-         checkTypes(r, cname, scope);
+         checkTypes(r, root, cname, scope);
       }
       
       if(root.getProp("line") == null && root.getChildren().size() > 0) {
@@ -406,6 +408,33 @@ public class Analyzer {
                         getNodeType(root, cname, -1, true).equals("unit") || getNodeType(root, cname, -1, true).equals("float"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString()
                            + " cannot be instantiated");
+               break;
+            case SymbolValue.ERASE:
+               type = getNodeType(root, cname, 0, true);
+               root.addProp("type", type);
+               if(Character.isLowerCase(type.charAt(0)))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot erase a basic type");
+               //Add call to delete method if exists above
+               do {
+                  if((s = prim.get(type).get("delete")) != null) {
+                     if(s.formals != null || !s.userType.getProp("type").equals(type) || (s.sh == ScopeItem.PRIVATE && !type.equals(getNodeType(root, cname, -1, true))))
+                        continue;
+                     iof = parent.getChildren().indexOf(root);
+                     type = getNodeType(root, cname, -1, true);
+                     deref = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__del").addProp("type", type);
+                     parent.getChildren().set(iof, new ASTNode("let", null).addChild(deref).addChild(new ASTNode(SymbolValue.TYPE_IDENTIFIER, type)
+                              .addProp("type", type)).addChild(new ASTNode("call", null).addProp("type", type).addChild(root.getChildren().get(0))
+                              .addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "delete"))).addChild(new ASTNode("block", null).addProp("type", type)
+                              .addChild(new ASTNode(SymbolValue.ERASE, null).addProp("type", type).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__del")))).addProp("type", type));
+                     root = parent.getChildren().get(iof);
+                     root.scope.put(ScopeItem.FIELD, "__del", new ScopeItem(ScopeItem.FIELD, parent.getChildren().get(iof).getChildren().get(1), 0, ScopeItem.PRIVATE));
+                     root.scope.setParent(parent.scope);
+                     root.getChildren().get(0).scope.setParent(root.scope);
+                     root.getChildren().get(2).scope.setParent(root.scope);
+                     root.getChildren().get(3).getChildren().get(0).getChildren().get(0).scope.setParent(root.scope);
+                     break;
+                  }
+               } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
                break;
             default:
                break;

@@ -30,7 +30,7 @@ terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
 terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL;
-terminal Symbol SWITCH, LBRK, RBRK, TILDE, INCLUDE, FOR; /* Extensions */
+terminal Symbol SWITCH, LBRK, RBRK, TILDE, INCLUDE, FOR, ERASE; /* Extensions */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
@@ -156,6 +156,7 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | expression:e DOT OBJECT_IDENTIFIER:o {: RESULT = new ASTNode("fieldget", null); ASTNode c2 = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); c2.addProp("line", o.line + ""); c2.addProp("col", o.col + ""); RESULT.addProp("line", e.getProp("line")); RESULT.addProp("col", e.getProp("col")); RESULT.addChild(e); RESULT.addChild(c2); :}
              | expression:e DOT OBJECT_IDENTIFIER:o deref:d {: RESULT = new ASTNode("fieldget", null); ASTNode c2 = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); c2.addProp("line", o.line + ""); c2.addProp("col", o.col + ""); RESULT.addProp("line", e.getProp("line")); RESULT.addProp("col", e.getProp("col")); RESULT.addChild(e); RESULT.addChild(c2); RESULT.addChild(d); :}
              | expression:e LOWER TYPE_IDENTIFIER:c GREATER {: RESULT = new ASTNode("cast", null); RESULT.addChild(e); RESULT.addProp("cast", c.val); RESULT.addProp("col", e.getProp("col")); RESULT.addProp("line", e.getProp("line")); :} 
+             | ERASE:p expression:e {: RESULT = new ASTNode(SymbolValue.ERASE, null).addChild(e).addProp("col", p.col + "").addProp("line", p.line + ""); :}
              | lit:l {: RESULT = l; :}
              | LPAR:t RPAR {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.UNIT_VALUE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "unit"); :}
              | LPAR expression:e RPAR {: RESULT = e; :}

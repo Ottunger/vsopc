@@ -103,6 +103,7 @@ DecIntegerLiteral = [0-9]+
    "unit"/{AfterToken} { return symbol(SymbolValue.UNIT); }
    "or"/{AfterToken} { return symbol(SymbolValue.OR); }
    "float"/{AfterToken} { return symbol(SymbolValue.FLOAT); }
+   "erase"/{AfterToken} { return symbol(SymbolValue.ERASE); }
    
    /* identifiers */ 
    {Identifier}/{AfterToken} { return symbol(SymbolValue.OBJECT_IDENTIFIER, yytext()); }

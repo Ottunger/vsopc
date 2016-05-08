@@ -3,6 +3,10 @@ class List {
    +isNil() : bool { true }
    +length() : int32 { 0 }
    +head() : int32 { head }
+   +delete() : List {
+      head <- 0;
+      self
+   }
 }
 
 (* Nil is nothing more than a glorified alias to List *)
@@ -69,7 +73,8 @@ class Main extends IO {
                let xl2 : Cons <- xl<Cons> in {
                   print("Got back my instance")
                }
-            }
+            };
+            erase xs
          };
       print("Here at last");
       say2(1, "Hehe");

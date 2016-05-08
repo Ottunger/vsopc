@@ -30,6 +30,7 @@ public class SymbolValue {
   public static final int CLASS = 4;
   public static final int DIV = 30;
   public static final int PLUS = 27;
+  public static final int ERASE = 55;
   public static final int ASSIGN = 35;
   public static final int IF = 9;
   public static final int DOT = 36;
@@ -118,7 +119,8 @@ public class SymbolValue {
   "RBRK",
   "TILDE",
   "INCLUDE",
-  "FOR"
+  "FOR",
+  "ERASE"
   };
 }
 

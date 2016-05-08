@@ -301,6 +301,12 @@ public class ASTNode implements Cloneable {
             case SymbolValue.ASSIGN:
                children.get(0).dump(all);
                break;
+            case SymbolValue.ERASE:
+               System.out.print("Erase(");
+               children.get(0).dump(all);
+               System.out.print(")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
             default:
                break;
          }
