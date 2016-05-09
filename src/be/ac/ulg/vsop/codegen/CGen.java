@@ -98,19 +98,19 @@ public class CGen {
                + "char Object_equals(Object_struct* a, Object_struct *b) {return a == b;}");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
-               + "IO_struct* IO_printInt(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); IO_struct* IO_printBool(IO_struct*, char);"
-               + "char* IO_inputLine(IO_struct*); int IO_inputInt(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);"
-               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); IO_struct* (*printFloat)(IO_struct*, float); int (*inputInt)(IO_struct*);"
-               + "IO_struct* (*printBool)(IO_struct*, char); IO_struct* (*printInt)(IO_struct*, int); char* (*inputLine)(IO_struct*);"
+               + "IO_struct* IO_printInt32(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); IO_struct* IO_printBool(IO_struct*, char);"
+               + "char* IO_inputLine(IO_struct*); int IO_inputInt32(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);"
+               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); IO_struct* (*printInt32)(IO_struct*, int); IO_struct* (*printFloat)(IO_struct*, float);"
+               + "IO_struct* (*printBool)(IO_struct*, char); int (*inputInt32)(IO_struct*); char* (*inputLine)(IO_struct*);"
                + "char (*inputBool)(IO_struct*); IO_struct* (*print)(IO_struct*, char*); float (*inputFloat)(IO_struct*);};"
-               + "IO_vtable IO_static_vtable = {Object_equals, IO_printFloat, IO_inputInt, IO_printBool,"
-               + "IO_printInt, IO_inputLine, IO_inputBool, IO_print, IO_inputFloat}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
+               + "IO_vtable IO_static_vtable = {Object_equals, IO_printInt32, IO_printFloat, IO_printBool, IO_inputInt32,"
+               + "IO_inputLine, IO_inputBool, IO_print, IO_inputFloat}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
                + "IO_struct* IO_print(IO_struct* self, char* str) {printf(\"%s\", str); return self;}"
-               + "IO_struct* IO_printInt(IO_struct* self, int num) {printf(\"%d\", num); return self;}"
+               + "IO_struct* IO_printInt32(IO_struct* self, int num) {printf(\"%d\", num); return self;}"
                + "IO_struct* IO_printFloat(IO_struct* self, float num) {printf(\"%f\", num); return self;}"
                + "IO_struct* IO_printBool(IO_struct* self, char bool) {if(bool) printf(\"true\"); else printf(\"false\"); return self;}"
                + "char* IO_inputLine(IO_struct* self) {char* ret = GC_MALLOC(256); if(!fgets(ret, 256, stdin)) {ret = GC_MALLOC(1); ret[0] = 0;} return ret;}"
-               + "int IO_inputInt(IO_struct* self) {int ret; if(scanf(\"%d\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret;}"
+               + "int IO_inputInt32(IO_struct* self) {int ret; if(scanf(\"%d\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret;}"
                + "float IO_inputFloat(IO_struct* self) {float ret; if(scanf(\"%f\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret;}"
                + "char IO_inputBool(IO_struct* self) {char ret; if(scanf(\"%c\", &ret) == EOF) {fputs(\"Error reading input.\", stderr); exit(1);} return ret? 0x01 : 0x00;}");
       
@@ -224,6 +224,8 @@ public class CGen {
     */
    @SuppressWarnings("unchecked")
    private void genStructures(ASTNode root, boolean pass, boolean second) {
+      int shift = 0, j;
+      CClassRecord c;
       String type = "", upper = "";
       ASTNode a, vclass;
       ArrayList<String> fields, types;
@@ -310,7 +312,7 @@ public class CGen {
                   //Write the fields into the C code
                   for(int i = 0; i < methods.size(); i++) {
                      sb.append(sigs.get(i).ret + " (*" + methods.get(i) + ")(");
-                     for(int j = 0; j < sigs.get(i).pnames.size(); j++) {
+                     for(j = 0; j < sigs.get(i).pnames.size(); j++) {
                         sb.append(sigs.get(i).ptypes.get(j) + ",");
                      }
                      if(sigs.get(i).pnames.size() > 0)
@@ -369,8 +371,31 @@ public class CGen {
             genStructures(r, false, second);
          }
       } else if(second) {
+         String cname = root.getChildren().get(0).getValue().toString();
+         c = (CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cname);
+         //Build the whole of the class
          for(ASTNode r : root.getChildren()) {
-            genFunctions(root.getChildren().get(0).getValue().toString(), r);
+            genFunctions(cname, r);
+         }
+         //We can now close the _init__ method.
+         if(c.printed == false) {
+            //Now add local defined by "let"'s variables.
+            for(int i = 0; i < lets.get(cname + "_" + null).size(); i++) {
+               sb.insert(c.inits, letstypes.get(cname + "_" + null).get(i) + " " + lets.get(cname + "_" + null).get(i) + "; ");
+               shift += (letstypes.get(cname + "_" + null).get(i) + " " + lets.get(cname + "_" + null).get(i) + "; ").length();
+            }
+            //Now add local defined by instruction variables.
+            for(Map.Entry<ASTNode, String> iname : imapping.get(cname + "_" + null).entrySet()) {
+               sb.insert(c.inits, itypes.get(cname + "_" + null).get(iname.getKey()) + " " + iname.getValue() + "; ");
+               shift += (itypes.get(cname + "_" + null).get(iname.getKey()) + " " + iname.getValue() + "; ").length();
+            }
+            //All classes defined after us must shift were to insert
+            j = cdef.indexOf(cname);
+            for(int i = j + 1; i < cdef.size(); i++) {
+               ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).initb += shift;
+               ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).inits += shift;
+            }
+            c.printed = true;
          }
       }
    }
@@ -387,6 +412,8 @@ public class CGen {
       
       if(root.itype == SymbolValue.CLASS) {
          cname = root.getChildren().get(0).getValue().toString();
+         lets.put(cname + "_" + null, new ArrayList<String>());
+         letstypes.put(cname + "_" + null, new ArrayList<String>());
       } else if(root.stype.equals("method")) {
          mname = root.getChildren().get(0).getValue().toString();
          lets.put(cname + "_" + mname, new ArrayList<String>());
@@ -638,22 +665,6 @@ public class CGen {
                   }
                   if(leave)
                      break;
-               }
-               
-               //When the first method is met, we have written all fields push their instruction savers.
-               if(c.inits != 0) {
-                  //Now add local defined by instruction variables.
-                  for(Map.Entry<ASTNode, String> iname : imapping.get(cname + "_" + null).entrySet()) {
-                     sb.insert(c.inits, itypes.get(cname + "_" + null).get(iname.getKey()) + " " + iname.getValue() + "; ");
-                     shift += (itypes.get(cname + "_" + null).get(iname.getKey()) + " " + iname.getValue() + "; ").length();
-                  }
-                  c.inits = 0;
-                  //All classes defined after us must shift were to insert
-                  j = cdef.indexOf(cname);
-                  for(int i = j + 1; i < cdef.size(); i++) {
-                     ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).initb += shift;
-                     ((CClassRecord) ast.scope.getLLVM(ScopeItem.CTYPE, cdef.get(i))).inits += shift;
-                  }
                }
                
                //Now building normal and included methods

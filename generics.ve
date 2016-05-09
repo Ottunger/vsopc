@@ -141,7 +141,7 @@ class Array extends IO {
    
    +dumpAsIntArray() : Array {
       for n : values : len do
-         printInt(n<Integer>).print("\n");
+         printInt32(n<Integer>).print("\n");
       self
    }
 }

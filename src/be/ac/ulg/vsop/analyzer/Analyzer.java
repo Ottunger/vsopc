@@ -2,6 +2,7 @@ package be.ac.ulg.vsop.analyzer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import be.ac.ulg.vsop.lexer.Symbol;
 import be.ac.ulg.vsop.parser.ASTNode;
@@ -54,10 +55,10 @@ public class Analyzer {
       fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "str")).addProp("type", "string"));
       tmp = new ASTNode("block", null).addProp("type", "IO");
       prim.get("IO").put("print", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
-      //Method printInt
+      //Method printInt32
       fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "num")).addProp("type", "int32"));
       tmp = new ASTNode("block", null).addProp("type", "IO");
-      prim.get("IO").put("printInt", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("printInt32", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
       //Method printFloat
       fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "num")).addProp("type", "float"));
       tmp = new ASTNode("block", null).addProp("type", "IO");
@@ -69,9 +70,9 @@ public class Analyzer {
       //Method inputLine
       tmp = new ASTNode("block", null).addProp("type", "string");
       prim.get("IO").put("inputLine", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
-      //Method inputInt
+      //Method inputInt32
       tmp = new ASTNode("block", null).addProp("type", "int32");
-      prim.get("IO").put("inputInt", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
+      prim.get("IO").put("inputInt32", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       //Method inputFloat
       tmp = new ASTNode("block", null).addProp("type", "float");
       prim.get("IO").put("inputFloat", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
@@ -107,7 +108,7 @@ public class Analyzer {
       //Register all classes top domain
       regClasses(root, true);
       //Register scopes
-      regScope(root, null, null, 1);
+      regScope(root, null, null, 1, false);
       //Check we have a main
       if((si = root.scope.get(ScopeItem.CLASS, "Main")) == null)
          throw new Exception("1:1: semantics error no Main class");
@@ -390,6 +391,8 @@ public class Analyzer {
                break;
             case SymbolValue.ISNULL:
                root.addProp("type", "bool");
+               if(!Character.isUpperCase(root.getChildren().get(0).getProp("type").toString().charAt(0)))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use isnull operator on basic type");
                break;
             case SymbolValue.ASSIGN:
                root.addProp("type", getNodeType(root, cname, 0, true));
@@ -677,9 +680,10 @@ public class Analyzer {
     * @param parent Parent of the current node.
     * @param cname Class name.
     * @param level Level of scope.
+    * @param inmeth True if running inside a method.
     * @throws Exception
     */
-   private void regScope(ASTNode root, ASTNode parent, String cname, int level) throws Exception {
+   private void regScope(ASTNode root, ASTNode parent, String cname, int level, boolean inmeth) throws Exception {
       String type;
       ASTNode deref;
       ScopeItem si;
@@ -704,6 +708,15 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString() + " defines an extends-loop");
                break;
             case SymbolValue.OBJECT_IDENTIFIER:
+               //Should not access locally defined variables in inializers out of methods
+               if(inmeth == false && !ASTNode.typeValue(parent).equals("field") && !ASTNode.typeValue(parent).equals("call") && 
+                        root.scope.getBeforeClassLevel(ScopeItem.FIELD, root.getValue().toString()) == null)
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use identifier " + root.getValue().toString() +
+                           " out of a method");
+               if(inmeth == false && ASTNode.typeValue(parent).equals("call") && parent.getChildren().get(0).itype == SymbolValue.OBJECT_IDENTIFIER && 
+                        parent.getChildren().get(0).getValue().equals("self"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot dispatch " + root.getValue().toString() +
+                           " on self out of a method");
                //Try to find from a local scope
                si = root.scope.get(ScopeItem.FIELD, root.getValue().toString());
                if(si != null) {
@@ -754,6 +767,7 @@ public class Analyzer {
                      root.scope.get(ScopeItem.CLASS, root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue().toString()) == null)
                throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown return type " +
                         root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue() + " for method");
+            inmeth = true;
          } else {
             if(root.stype.equals("field")) {
                //Check override higher only
@@ -787,7 +801,7 @@ public class Analyzer {
                case "let":
                   //If we turned a "for" into a "let", we need to check the generated array type
                   if(root.getChildren().get(0).getProp("type").equals(Analyzer.EMPTY) && root.getChildren().get(0).getValue().equals("__arr")) {
-                     regScope(root.getChildren().get(2).getChildren().get(2).getChildren().get(0).getChildren().get(1), root, cname, level + 3);
+                     regScope(root.getChildren().get(2).getChildren().get(2).getChildren().get(0).getChildren().get(1), root, cname, level + 3, inmeth);
                      type = Analyzer.lastTokens(root, getNodeType(root.getChildren().get(2).getChildren().get(2).getChildren().get(0), cname, 1, false),
                               new ASTNode("dummy", null));
                      root.getChildren().set(1, new ASTNode(SymbolValue.TYPE_IDENTIFIER, type).addProp("type", type));
@@ -812,7 +826,7 @@ public class Analyzer {
       }
       
       for(ASTNode r : root.getChildren()) {
-         regScope(r, root, cname, level + 1);
+         regScope(r, root, cname, level + 1, inmeth);
       }
    }
    
@@ -872,9 +886,21 @@ public class Analyzer {
          si = new ScopeItem(ScopeItem.METHOD,
                has? root.getChildren().get(2) : root.getChildren().get(1),
                has? root.getChildren().get(1) : null, 3, extd? ScopeItem.fromSymbol((Symbol)root.getProp("visi")) : ScopeItem.PUBLIC);
+         //Check no redefinition in the same class
          if(meths.containsKey(root.getChildren().get(0).getValue().toString()))
             throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot redefine method " +
                     root.getChildren().get(0).getValue().toString() + " in the same class");
+         //Check no redefinition of formal
+         if(has) {
+            HashSet<String> formals = new HashSet<String>();
+            for(int i = 0; i < root.getChildren().get(1).getChildren().size(); i++) {
+               if(formals.contains(root.getChildren().get(1).getChildren().get(i).getChildren().get(0).getValue().toString()))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot have twice argument " +
+                           root.getChildren().get(1).getChildren().get(i).getChildren().get(0).getValue().toString() + " in method " +
+                           root.getChildren().get(0).getValue().toString());
+               formals.add(root.getChildren().get(1).getChildren().get(i).getChildren().get(0).getValue().toString());
+            }
+         }
          meths.put(root.getChildren().get(0).getValue().toString(), si);
       } else if(root.stype.equals("field")) {
          //If we have the "getter" property, we generate default getter/setter
@@ -935,7 +961,7 @@ public class Analyzer {
             has = root.getChildren().size() > 3;
             //Check same return & same formals at both ends, otherwise bad override
             if(!getNodeType(root, n, has? 2 : 1, true).equals(getNodeType(t.userType, n, -1, true)))
-               return false;
+               return true;
             if(((root.getChildren().size() == 3) != (t.formals == null)) ||
                      (has && t.formals != null && root.getChildren().get(1).getChildren().size() != t.formals.getChildren().size())) {
                return true;

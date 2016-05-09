@@ -26,11 +26,11 @@ class Main extends IO {
          let xs : Cons <- (new Cons).init(0, (new Cons).init(1, (new Cons).init(2, new Nil))) in {
             xs.head();
             print("Here");
-            printInt(xs.head());
+            printInt32(xs.head());
             print("Here");
-            printInt(xs.next().head());
+            printInt32(xs.next().head());
             print("Here");
-            printInt(1).printInt(xs.next().head()).printInt(xs.length()).printInt(xs.next().length()) };
+            printInt32(1).printInt32(xs.next().head()).printInt32(xs.length()).printInt32(xs.next().length()) };
       print("Here at last");
       0
    }

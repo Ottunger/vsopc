@@ -54,7 +54,7 @@ class ExternalMath {
 
 class Main extends IO {
    -say2(a : int32, b : string : "Hi") : int32 {
-      printInt(a).print(b);
+      printInt32(a).print(b);
       3
    }
    ~afloat() : float {
@@ -67,15 +67,15 @@ class Main extends IO {
             //Have just assigned to public field :3
             xs.head();
             print("Here 1\n");
-            printInt(xs.getHead());
+            printInt32(xs.getHead());
             print("\nHere 2\n");
-            printInt(xs.next().head());
+            printInt32(xs.next().head());
             print("\nHere 3\n");
-            printInt(1).printInt(xs.next().head()).printInt(xs.length()).printInt(xs.next().length());
+            printInt32(1).printInt32(xs.next().head()).printInt32(xs.length()).printInt32(xs.next().length());
             print("\nLength as dyn cast\n");
-            printInt(xs.length());
+            printInt32(xs.length());
             print("\nLength as static cast\n");
-            printInt(xs<List.length());
+            printInt32(xs<List.length());
             let xl : List <- xs in {
                let xl2 : Cons <- xl<Cons> in {
                   print("Got back my instance")
@@ -89,7 +89,7 @@ class Main extends IO {
       print("Getting a float");
       printFloat(afloat());
       printFloat(@say2(3));
-      print("Getting an array element").printInt((new UseArray).alloc());
+      print("Getting an array element").printInt32((new UseArray).alloc());
       print("Here is your echoed float: ").printFloat(inputFloat());
       0
    }

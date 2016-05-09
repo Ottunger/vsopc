@@ -11,6 +11,7 @@ public class CClassRecord {
    public ArrayList<String> meths;
    public ArrayList<CSignature> sigs;
    public int inits, initb;
+   public boolean printed;
 
    /**
     * Records info about a class at top level.
@@ -18,6 +19,7 @@ public class CClassRecord {
     * @param types List of fields types.
     * @param meths List of method names.
     * @param sigs List of method signatures.
+    * @param inits Init position.
     * @param initb Init position.
     */
    public CClassRecord(ArrayList<String> fields, ArrayList<String> types, ArrayList<String> meths, ArrayList<CSignature> sigs, int inits, int initb) {
@@ -27,6 +29,7 @@ public class CClassRecord {
       this.sigs = sigs;
       this.inits = inits;
       this.initb = initb;
+      printed = false;
    }
 
 }
