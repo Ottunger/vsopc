@@ -800,7 +800,7 @@ class CUP$VSOPParser$actions {
 		int tleft = ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()).left;
 		int tright = ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()).right;
 		ASTNode t = (ASTNode)((java_cup.runtime.Symbol) CUP$VSOPParser$stack.peek()).value;
-		 RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); 
+		 RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); 
               CUP$VSOPParser$result = parser.getSymbolFactory().newSymbol("formal",11, ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.elementAt(CUP$VSOPParser$top-2)), ((java_cup.runtime.Symbol)CUP$VSOPParser$stack.peek()), RESULT);
             }
           return CUP$VSOPParser$result;

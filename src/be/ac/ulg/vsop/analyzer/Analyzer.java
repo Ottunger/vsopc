@@ -403,10 +403,10 @@ public class Analyzer {
                }
                root.addProp("type", type);
                //Should be done by parser but security first
-               if(getNodeType(root, cname, -1, true).equals("Object") || getNodeType(root, cname, -1, true).equals("string") ||
-                        getNodeType(root, cname, -1, true).equals("int32") || getNodeType(root, cname, -1, true).equals("bool") ||
-                        getNodeType(root, cname, -1, true).equals("unit") || getNodeType(root, cname, -1, true).equals("float"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error class " + root.getChildren().get(0).getValue().toString()
+               if(getNodeType(root, cname, -1, true).equals("string") || getNodeType(root, cname, -1, true).equals("int32") ||
+                        getNodeType(root, cname, -1, true).equals("bool") || getNodeType(root, cname, -1, true).equals("unit") ||
+                        getNodeType(root, cname, -1, true).equals("float"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error basic type " + root.getChildren().get(0).getValue().toString()
                            + " cannot be instantiated");
                break;
             case SymbolValue.ERASE:

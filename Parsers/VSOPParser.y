@@ -80,7 +80,7 @@ formals ::= formal:t COMMA formals_full:c {: RESULT = c; c.pushChild(t); :}
           | {: RESULT = null; :};
 formals_full ::= formal:t COMMA formals_full:c {: RESULT = c; c.pushChild(t); :}
                | formal:t {: RESULT = new ASTNode("formals", null); RESULT.pushChild(t); :};
-formal ::= OBJECT_IDENTIFIER:o COLON types:t {: RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); :};
+formal ::= OBJECT_IDENTIFIER:o COLON types:t {: RESULT = new ASTNode("formal", null); ASTNode a = new ASTNode(SymbolValue.OBJECT_IDENTIFIER, o.val); a.addProp("line", o.line + ""); a.addProp("col", o.col + ""); a.addProp("type", ASTNode.typeValue(t)); RESULT.addProp("type", ASTNode.typeValue(t)); RESULT.addChild(a); RESULT.addChild(t); :};
 
 block ::= LBRACE expression:e SEMICOLON block_full:b RBRACE {: RESULT = b; b.pushChild(e); :}
         | LBRACE expression:e RBRACE {: RESULT = new ASTNode("block", null); RESULT.addChild(e); :};
