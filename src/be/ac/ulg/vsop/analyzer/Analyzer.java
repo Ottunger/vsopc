@@ -726,8 +726,12 @@ public class Analyzer {
                      if(root.getChildren().size() > 0) {
                         deref = root.getChildren().get(0);
                         root.addProp("type", Analyzer.lastTokens(root, getNodeType(si.userType, cname, -1, false), deref));
-                     } else
-                        root.addProp("type", getNodeType(si.userType, cname, -1, false));
+                     } else {
+                        if(!ASTNode.typeValue(parent).equals("method"))
+                           root.addProp("type", getNodeType(si.userType.scope.get(ScopeItem.FIELD, root.getValue().toString()).userType, cname, -1, false));
+                        else
+                           root.addProp("type", getNodeType(si.userType, cname, -1, false));
+                     }
                      break;
                   }
                } while(!(type = ext.get(type)).equals(Analyzer.EMPTY));
