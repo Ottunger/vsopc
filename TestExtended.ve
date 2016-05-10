@@ -81,7 +81,9 @@ class Main extends IO {
                   print("Got back my instance")
                }
             };
-            erase xs
+            erase xs;
+            if s <> 0:5 then
+               print("s is between 0 and 5")
          };
       print("Here at last");
       say2(1, "Hehe");

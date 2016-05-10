@@ -133,6 +133,7 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | NOT expression:e {: RESULT = new ASTNode(SymbolValue.NOT, null); RESULT.addChild(e); :}
              | SWITCH expression:e {: RESULT = new ASTNode(SymbolValue.SWITCH, null); RESULT.addChild(e); :}
              | expression:e EQUAL expression:f {: RESULT = new ASTNode(SymbolValue.EQUAL, null); RESULT.addChild(e); RESULT.addChild(f); :}
+             | expression:e LOWER GREATER expression:f COLON expression:g {: RESULT = new ASTNode("let", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__cmp").addProp("type", "int32")).addChild(new ASTNode(SymbolValue.INT32, null).addProp("type", "int32")).addChild(e).addChild(new ASTNode(SymbolValue.AND, null).addChild(new ASTNode(SymbolValue.GREATER_EQUAL, null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__cmp")).addChild(f)).addChild(new ASTNode(SymbolValue.LOWER_EQUAL, null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "__cmp")).addChild(f))); :}
              | expression:e LOWER expression:f {: RESULT = new ASTNode(SymbolValue.LOWER, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e LOWER_EQUAL expression:f {: RESULT = new ASTNode(SymbolValue.LOWER_EQUAL, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e AND expression:f {: RESULT = new ASTNode(SymbolValue.AND, null); RESULT.addChild(e); RESULT.addChild(f); :}
