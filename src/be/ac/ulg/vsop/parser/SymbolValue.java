@@ -9,9 +9,11 @@ package be.ac.ulg.vsop.parser;
 public class SymbolValue {
   /* terminals */
   public static final int LBRK = 50;
+  public static final int SHR = 58;
   public static final int TYPE_IDENTIFIER = 39;
   public static final int POW = 31;
   public static final int STRING_LITERAL = 40;
+  public static final int SHL = 57;
   public static final int INT32 = 11;
   public static final int UNIT = 42;
   public static final int LOWER = 33;
@@ -44,6 +46,7 @@ public class SymbolValue {
   public static final int INCLUDE = 53;
   public static final int ISNULL = 12;
   public static final int NULL = 41;
+  public static final int BYTE = 56;
   public static final int SWITCH = 49;
   public static final int TIMES = 29;
   public static final int COLON = 24;
@@ -120,7 +123,10 @@ public class SymbolValue {
   "TILDE",
   "INCLUDE",
   "FOR",
-  "ERASE"
+  "ERASE",
+  "BYTE",
+  "SHL",
+  "SHR"
   };
 }
 

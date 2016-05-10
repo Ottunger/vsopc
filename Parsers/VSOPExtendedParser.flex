@@ -66,7 +66,7 @@ LineTerminator = \r\n|\n
 White = [ \t\f\r]
 WhiteSpace = {LineTerminator} | {White}
 EndOfLineComment = "//" [^\n]* {LineTerminator}?
-Operators = [\ {\ } \( \) : ; , \+ - \* \/ \^ = \< \. \> \[ \] @ \~]
+Operators = [\ {\ } \( \) : ; , \+ - \* \/ \^ = \< \. \> \[ \] @ \~] | "<<" | ">>"
 AfterToken = {WhiteSpace} | {Operators}
 AfterDigit = {AfterToken} | [_a-zA-Z]
 
@@ -104,6 +104,7 @@ DecIntegerLiteral = [0-9]+
    "or"/{AfterToken} { return symbol(SymbolValue.OR); }
    "float"/{AfterToken} { return symbol(SymbolValue.FLOAT); }
    "erase"/{AfterToken} { return symbol(SymbolValue.ERASE); }
+   "byte"/{AfterToken} { return symbol(SymbolValue.BYTE); }
    
    /* identifiers */ 
    {Identifier}/{AfterToken} { return symbol(SymbolValue.OBJECT_IDENTIFIER, yytext()); }
@@ -121,6 +122,8 @@ DecIntegerLiteral = [0-9]+
    "}" { return symbol(SymbolValue.RBRACE); }
    "(" { return symbol(SymbolValue.LPAR); }
    ")" { return symbol(SymbolValue.RPAR); }
+   "<<" { return symbol(SymbolValue.SHL); }
+   ">>" { return symbol(SymbolValue.SHR); }
    ":" { return symbol(SymbolValue.COLON); }
    ";" { return symbol(SymbolValue.SEMICOLON); }
    "," { return symbol(SymbolValue.COMMA); }

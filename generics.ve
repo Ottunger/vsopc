@@ -18,6 +18,25 @@ class Bool {
    }
 }
 
+class Byte {
+   -+value : byte;
+   
+   +toBool() : bool {
+      if value = 0 then
+         false
+      else
+         true
+   }
+   
+   +equals(b : Object) : bool {
+      let b2 : Byte <- b<Byte> in
+         if value = b2.value then
+            true
+         else
+            false
+   }
+}
+
 class Integer {
    -+value : int32;
    

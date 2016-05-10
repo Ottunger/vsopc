@@ -8,7 +8,7 @@ public class Symbol extends java_cup.runtime.ComplexSymbolFactory.ComplexSymbol 
 		"let", "new", "not", "string", "then", "true", "while", "lbrace", "rbrace", "lpar", "rpar", "colon", "semicolon", "comma", "plus",
 		"minus", "times", "div", "pow", "equal", "lower", "lower-equal", "assign", "dot", "integer-literal", "object-identifier", "type-identifier",
 		"string-literal", "null", "unit", "unit-value", "greater", "greater-equal", "or", "float", "float-literal", "switch", "lbrk", "rbrk", "tilde",
-		"include", "for", "erase"};
+		"include", "for", "erase", "byte", "shift-left", "shift-right"};
    public int line, col;
    public Object val;
 	

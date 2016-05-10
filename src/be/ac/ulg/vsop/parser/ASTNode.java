@@ -228,6 +228,22 @@ public class ASTNode implements Cloneable {
                System.out.print(")");
                if(all) System.out.print(" : " + getProp("type"));
                break;
+            case SymbolValue.SHL:
+               System.out.print("BinOp(<<, ");
+               children.get(0).dump(all);
+               System.out.print(", ");
+               children.get(1).dump(all);
+               System.out.print(")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
+            case SymbolValue.SHR:
+               System.out.print("BinOp(>>, ");
+               children.get(0).dump(all);
+               System.out.print(", ");
+               children.get(1).dump(all);
+               System.out.print(")");
+               if(all) System.out.print(" : " + getProp("type"));
+               break;
             case SymbolValue.PLUS:
                System.out.print("BinOp(+, ");
                children.get(0).dump(all);

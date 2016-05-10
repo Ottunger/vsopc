@@ -48,7 +48,7 @@ class UseArray {
 class ExternalMath {
    +strchr(s : string, i : int32) : string {
       //This won't ever get evaluated by the compiler
-      "Lol"
+      0
    }
 }
 

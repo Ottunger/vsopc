@@ -31,6 +31,7 @@ public class Analyzer {
       ext.put("string", Analyzer.EMPTY);
       ext.put("float", Analyzer.EMPTY);
       ext.put("int32", Analyzer.EMPTY);
+      ext.put("byte", Analyzer.EMPTY);
       ext.put("bool", Analyzer.EMPTY);
       ext.put("unit", Analyzer.EMPTY);
       ext.put("IO", "Object");
@@ -40,6 +41,7 @@ public class Analyzer {
       prim.put("string", new HashMap<String, ScopeItem>());
       prim.put("float", new HashMap<String, ScopeItem>());
       prim.put("int32", new HashMap<String, ScopeItem>());
+      prim.put("byte", new HashMap<String, ScopeItem>());
       prim.put("bool", new HashMap<String, ScopeItem>());
       prim.put("unit", new HashMap<String, ScopeItem>());
       prim.put("IO", new HashMap<String, ScopeItem>());
@@ -101,6 +103,7 @@ public class Analyzer {
       root.scope.put(ScopeItem.CLASS, "string", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "string"), 0));
       root.scope.put(ScopeItem.CLASS, "float", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "float"), 0));
       root.scope.put(ScopeItem.CLASS, "int32", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "int32"), 0));
+      root.scope.put(ScopeItem.CLASS, "byte", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "byte"), 0));
       root.scope.put(ScopeItem.CLASS, "bool", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "bool"), 0));
       root.scope.put(ScopeItem.CLASS, "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
       root.scope.put(ScopeItem.CLASS, "IO", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "IO").addProp("prim", prim), 0));
@@ -218,6 +221,9 @@ public class Analyzer {
          case "String":
             type = "string";
             break;
+         case "Byte":
+            type = "byte";
+            break;
          case "Bool":
             type = "bool";
             break;
@@ -267,6 +273,9 @@ public class Analyzer {
             break;
          case "string":
             type = "String";
+            break;
+         case "byte":
+            type = "Byte";
             break;
          case "bool":
             type = "Bool";
@@ -330,8 +339,8 @@ public class Analyzer {
             case SymbolValue.NOT:
                unwrapAt(root, cname, 0);
                root.addProp("type", getNodeType(root, cname, 0, true));
-               if(!getNodeType(root, cname, 0, true).equals("bool"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can only use '!' on bool type");
+               if(!getNodeType(root, cname, 0, true).equals("bool") && !getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("byte"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can only use '!' on bool or integer type");
                break;
             case SymbolValue.SWITCH:
                unwrapAt(root, cname, 0);
@@ -343,7 +352,9 @@ public class Analyzer {
                root.addProp("type", "bool");
                meths = prim.get(getNodeType(root, cname, 0, true));
                /* Basic type if no registered method for this type */
-               if(meths != null && meths.size() == 0 && !getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true)))
+               if(meths != null && meths.size() == 0 && !getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true))
+                        && !(getNodeType(root, cname, 0, true).equals("int32") && getNodeType(root, cname, 1, true).equals("byte"))
+                        && !(getNodeType(root, cname, 0, true).equals("byte") && getNodeType(root, cname, 1, true).equals("int32")))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '=' on different primitive types");
                break;
             case SymbolValue.AND:
@@ -351,8 +362,9 @@ public class Analyzer {
                unwrapAt(root, cname, 0);
                unwrapAt(root, cname, 1);
                root.addProp("type", getNodeType(root, cname, 0, true));
-               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("bool"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and/or on something not int32 or bool");
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("byte")
+                        && !getNodeType(root, cname, 0, true).equals("bool"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and/or on something not integer or bool");
                if(!getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use and/or on different types");
                break;
@@ -363,10 +375,19 @@ public class Analyzer {
                unwrapAt(root, cname, 0);
                unwrapAt(root, cname, 1);
                root.addProp("type", "bool");
-               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("byte")
+                        && !getNodeType(root, cname, 0, true).equals("float"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary comparator on not both numeric types");
                if(!getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary comparator on different types");
+               break;
+            case SymbolValue.SHL:
+            case SymbolValue.SHR:
+               unwrapAt(root, cname, 0);
+               unwrapAt(root, cname, 1);
+               root.addProp("type", "int32");
+               if(!getNodeType(root, cname, 0, true).equals("int32") || !getNodeType(root, cname, 0, true).equals("byte"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use shifting operator on not both integer types");
                break;
             case SymbolValue.PLUS:
             case SymbolValue.MINUS:
@@ -375,7 +396,8 @@ public class Analyzer {
                unwrapAt(root, cname, 0);
                unwrapAt(root, cname, 1);
                root.addProp("type", getNodeType(root, cname, 0, true));
-               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("byte")
+                        && !getNodeType(root, cname, 0, true).equals("float"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on not both numeric types");
                if(!getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use binary operator on different types");
@@ -384,10 +406,11 @@ public class Analyzer {
                unwrapAt(root, cname, 0);
                unwrapAt(root, cname, 1);
                root.addProp("type", getNodeType(root, cname, 0, true));
-               if(!getNodeType(root, cname, 1, true).equals("int32"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error exponent should be int32");
-               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("float"))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error exponed should be int32 or float");
+               if(!getNodeType(root, cname, 1, true).equals("int32") && !getNodeType(root, cname, 1, true).equals("byte"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error exponent should be integer");
+               if(!getNodeType(root, cname, 0, true).equals("int32") && !getNodeType(root, cname, 0, true).equals("byte")
+                        && !getNodeType(root, cname, 0, true).equals("float"))
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error exponed should be numeric");
                break;
             case SymbolValue.ISNULL:
                root.addProp("type", "bool");
@@ -408,7 +431,7 @@ public class Analyzer {
                //Should be done by parser but security first
                if(getNodeType(root, cname, -1, true).equals("string") || getNodeType(root, cname, -1, true).equals("int32") ||
                         getNodeType(root, cname, -1, true).equals("bool") || getNodeType(root, cname, -1, true).equals("unit") ||
-                        getNodeType(root, cname, -1, true).equals("float"))
+                        getNodeType(root, cname, -1, true).equals("float") || getNodeType(root, cname, -1, true).equals("byte"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error basic type " + root.getChildren().get(0).getValue().toString()
                            + " cannot be instantiated");
                break;
@@ -447,7 +470,7 @@ public class Analyzer {
             case "deref":
                unwrapAt(root, cname, 0);
                root.addProp("type", getNodeType(root, cname, 0, true));
-               if(!root.getProp("type").equals("int32"))
+               if(!root.getProp("type").equals("int32") && !root.getProp("type").equals("byte"))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot index array by " + root.getProp("type").toString());
                break;
             case "fieldget":
@@ -505,7 +528,8 @@ public class Analyzer {
                         String arg = getNodeType(root.getChildren().get(2), cname, i, true);
                         String formal = getNodeType(t.formals, cname, i, true);
                         //We may have a problem, but why not bother try before?
-                        if(!Analyzer.isSameOrChild(ext, arg, formal)) {
+                        if(!Analyzer.isSameOrChild(ext, arg, formal) && !(arg.equals("int32") && formal.equals("byte"))
+                                 && !(arg.equals("byte") && formal.equals("int32"))) {
                            unwrapAt(root.getChildren().get(2), cname, i);
                            arg = getNodeType(root.getChildren().get(2), cname, i, true);
                            if(!Analyzer.isSameOrChild(ext, arg, formal))
@@ -539,7 +563,8 @@ public class Analyzer {
                         String arg = getNodeType(root.getChildren().get(2), cname, i, true);
                         String formal = getNodeType(t.formals, cname, i, true);
                         //We may have a problem, but why not bother try before?
-                        if(!Analyzer.isSameOrChild(ext, arg, formal)) {
+                        if(!Analyzer.isSameOrChild(ext, arg, formal) && !(arg.equals("int32") && formal.equals("byte"))
+                                 && !(arg.equals("byte") && formal.equals("int32"))) {
                            unwrapAt(root.getChildren().get(2), cname, i);
                            arg = getNodeType(root.getChildren().get(2), cname, i, true);
                            if(!Analyzer.isSameOrChild(ext, arg, formal))
@@ -561,7 +586,9 @@ public class Analyzer {
                root.addProp("type", getNodeType(root, cname, 0, true));
                if(ext.get(Analyzer.basicType(getNodeType(root, cname, 0, true))) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, 0, true));
-               if(root.getChildren().size() > 2 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 2, true), getNodeType(root, cname, 0, true)))
+               if(root.getChildren().size() > 2 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 2, true), getNodeType(root, cname, 0, true))
+                        && !(getNodeType(root, cname, 2, true).equals("int32") && getNodeType(root, cname, 0, true).equals("byte"))
+                        && !(getNodeType(root, cname, 2, true).equals("byte") && getNodeType(root, cname, 0, true).equals("int32")))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, cname, 2, true) + " to " + getNodeType(root, cname, 0, true));
                break;
@@ -574,7 +601,9 @@ public class Analyzer {
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign anything to 'self'");
                //Check that assign a same typed-value or a parent-typed value
                if(root.getChildren().size() < 3) {
-                  if(!Analyzer.isSameOrChild(ext, getNodeType(root, cname, 1, true), getNodeType(root, cname, 0, true)))
+                  if(!Analyzer.isSameOrChild(ext, getNodeType(root, cname, 1, true), getNodeType(root, cname, 0, true))
+                           && !(getNodeType(root, cname, 2, true).equals("int32") && getNodeType(root, cname, 0, true).equals("byte"))
+                           && !(getNodeType(root, cname, 2, true).equals("byte") && getNodeType(root, cname, 0, true).equals("int32")))
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                               getNodeType(root, cname, 1, true) + " to " + getNodeType(root, cname, 0, true));
                } else {
@@ -587,10 +616,12 @@ public class Analyzer {
             case "method":
                if(ext.get(getNodeType(root, cname, -1, false)) == null)
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, -1, false));
-               //Currently, when a while is issued as last expression
+               //Would be as if WHILE did not return anything... Currently not used
                if(getNodeType(root, cname, root.getChildren().size() - 1, true).equals(Analyzer.EMPTY))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method cannot return anything as is");
-               if(!Analyzer.isSameOrChild(ext, getNodeType(root, cname, root.getChildren().size() - 1, true), getNodeType(root, cname, -1, false)))
+               //Check return type is valid
+               if(!cname.startsWith("External") &&
+                        !Analyzer.isSameOrChild(ext, getNodeType(root, cname, root.getChildren().size() - 1, true), getNodeType(root, cname, -1, false)))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error method type is " + 
                            getNodeType(root, cname, -1, false) + " but got " + getNodeType(root, cname, root.getChildren().size() - 1, true));
             case "block":
@@ -625,7 +656,9 @@ public class Analyzer {
                //Check in the assign part of the "let"
                if(root.getChildren().size() > 3 && Character.isUpperCase(getNodeType(root, cname, 1, false).charAt(0)))
                   wrapAt(root, cname, 2);
-               if(root.getChildren().size() > 3 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 2, true), getNodeType(root, cname, 1, false)))
+               if(root.getChildren().size() > 3 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 2, true), getNodeType(root, cname, 1, false))
+                        && !(getNodeType(root, cname, 2, true).equals("int32") && getNodeType(root, cname, 1, true).equals("byte"))
+                        && !(getNodeType(root, cname, 2, true).equals("byte") && getNodeType(root, cname, 1, true).equals("int32")))
                   throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot assign " + 
                            getNodeType(root, cname, 2, true) + " to " + getNodeType(root, cname, 1, false));
                root.addProp("type", getNodeType(root, cname, root.getChildren().size() - 1, true));
@@ -763,10 +796,14 @@ public class Analyzer {
                         root.getChildren().get(0).getValue().toString() + "' here");
             si.level = level;
             root.scope.putAbove(ScopeItem.METHOD, root.getChildren().get(0).getValue().toString(), si, 1);
+            //Check the return types
+            type = root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getProp("type").toString();
             if(root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).itype == SymbolValue.TYPE_IDENTIFIER &&
                      root.scope.get(ScopeItem.CLASS, root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue().toString()) == null)
                throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown return type " +
-                        root.getChildren().get(root.getChildren().get(1).stype.equals("formals")? 2 : 1).getValue() + " for method");
+                        type + " for method");
+            if(cname.startsWith("External") && Character.isUpperCase(type.charAt(0)) && !type.equals("Object"))
+               throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can only interface to basic types and Object");
             inmeth = true;
          } else {
             if(root.stype.equals("field")) {
@@ -790,6 +827,9 @@ public class Analyzer {
                   root.addProp("type", getNodeType(root, cname, 1, false));
                   if(ext.get(getNodeType(root, cname, 1, false)) == null)
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error unknown type " + getNodeType(root, cname, 1, false));
+                  if(cname.startsWith("External") && Character.isUpperCase(getNodeType(root, cname, 1, false).charAt(0))
+                           && !getNodeType(root, cname, 1, false).equals("Object"))
+                     throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error can only interface to basic types and Object");
                   if(root.getChildren().size() > 2 && !getNodeType(root, cname, 1, false).equals(getNodeType(root, cname, 2, false)))
                      throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": default value doesn't match expected type: " + getNodeType(root, cname, 1, false));
                   break;

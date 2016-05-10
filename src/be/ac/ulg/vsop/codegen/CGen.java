@@ -66,6 +66,7 @@ public class CGen {
       classes.remove("string");
       classes.remove("float");
       classes.remove("int32");
+      classes.remove("byte");
       classes.remove("bool");
       classes.remove("unit");
       classes.remove("IO");
@@ -345,7 +346,7 @@ public class CGen {
                      sb.deleteCharAt(sb.length() - 1);
                   sb.append("}; ");
                   
-                  //Now ading a new function for init
+                  //Now adding a new function for init
                   //Add init method for this class
                   sb.append(type + "_struct* " + type + "_init__(" + type + "_struct* self) {");
                   //Build "super();" call
@@ -456,6 +457,8 @@ public class CGen {
             case SymbolValue.LOWER:
             case SymbolValue.GREATER_EQUAL:
             case SymbolValue.GREATER:
+            case SymbolValue.SHL:
+            case SymbolValue.SHR:
             case SymbolValue.PLUS:
             case SymbolValue.MINUS:
             case SymbolValue.TIMES:
@@ -539,12 +542,12 @@ public class CGen {
             return "int" + stars;
          case "float":
             return "float" + stars;
+         case "byte":
          case "bool":
+         case "unit":
             return "char" + stars;
          case "string":
             return "char*" + stars;
-         case "unit":
-            return "char" + stars;
          default:
             //Is a pointer
             return tps[tps.length - 1] + "_struct*" + stars;
@@ -618,14 +621,13 @@ public class CGen {
          case "float":
             sb.append("float" + stars + " " + fname + "; ");
             break;
+         case "byte":
          case "bool":
+         case "unit":
             sb.append("char" + stars + " " + fname + "; ");
             break;
          case "string":
             sb.append("char*" + stars + " " + fname + "; ");
-            break;
-         case "unit":
-            sb.append("char" + stars + " " + fname + "; ");
             break;
          default:
             //Is a pointer
@@ -745,15 +747,15 @@ public class CGen {
             return field + " = 0; ";
          case "float":
             return field + " = 0.0f; ";
+         case "byte":
          case "bool":
-            return field + " = 0; ";
-         case "string":
-            return field + " = GC_MALLOC(sizeof(char)); " + (rself? "self->" : "") + field + "[0] = 0; "; 
          case "unit":
             return field + " = 0; ";
+         case "string":
+            return field + " = GC_MALLOC(sizeof(char)); " + (rself? "self->" : "") + field + "[0] = 0; ";
          default:
             //Is a pointer, or an array, eh, a pointer whatever
-            return field + " = NULL; ";
+            return field + " = (void*)0; ";
       }
    }
    
@@ -847,7 +849,10 @@ public class CGen {
       if(root.ending) {
          switch(root.itype) {
             case SymbolValue.NOT:
-               sb.append(imapping.get(cname + "_" + mname).get(root) + " = !" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
+               if(root.getProp("type").toString().equals("bool"))
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = !" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
+               else
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = ~" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
                break;
             case SymbolValue.SWITCH:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + (root.getProp("type").equals("int32")? "int" : "float")
@@ -879,6 +884,14 @@ public class CGen {
                break;
             case SymbolValue.GREATER:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") > (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               break;
+            case SymbolValue.SHL:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") << (" +
+                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               break;
+            case SymbolValue.SHR:
+               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") >> (" +
                         imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.PLUS:

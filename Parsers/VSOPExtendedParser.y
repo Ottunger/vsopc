@@ -30,7 +30,7 @@ terminal Symbol INTEGER_LITERAL;
 terminal Symbol OBJECT_IDENTIFIER, TYPE_IDENTIFIER, STRING_LITERAL;
 terminal Symbol NULL, UNIT, UNIT_VALUE; /* Newly defined */
 terminal Symbol GREATER, GREATER_EQUAL, OR, FLOAT, FLOAT_LITERAL;
-terminal Symbol SWITCH, LBRK, RBRK, TILDE, INCLUDE, FOR, ERASE; /* Extensions */
+terminal Symbol SWITCH, LBRK, RBRK, TILDE, INCLUDE, FOR, ERASE, BYTE, SHL, SHR; /* Extensions */
 
 /* Non terminals */
 non terminal ASTNode types, lit, program, class_all, class_body;
@@ -45,6 +45,7 @@ precedence right ASSIGN;
 precedence left AND, OR;
 precedence right NOT, SWITCH;
 precedence nonassoc LOWER, LOWER_EQUAL, GREATER, GREATER_EQUAL, EQUAL;
+precedence left SHL, SHR;
 precedence left PLUS, MINUS;
 precedence left TIMES, DIV;
 precedence left ISNULL;
@@ -61,6 +62,7 @@ simtypes ::= BOOL:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESU
         | UNIT:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.UNIT, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "unit"); :}
         | STRING:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.STRING, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "string"); :}
         | INT32:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.INT32, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "int32"); :}
+        | BYTE:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.BYTE, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "byte"); :}
         | FLOAT:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.FLOAT, null); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", "float"); :}
         | TYPE_IDENTIFIER:t {: Parser.lastLine = t.line; Parser.lastColumn = t.col; RESULT = new ASTNode(SymbolValue.TYPE_IDENTIFIER, t.val); RESULT.addProp("line", t.line + ""); RESULT.addProp("col", t.col + ""); RESULT.addProp("type", ASTNode.typeValue(RESULT)); :};
         
@@ -137,6 +139,8 @@ expression ::= IF expression:e THEN expression:f {: RESULT = new ASTNode("if", n
              | expression:e GREATER expression:f {: RESULT = new ASTNode(SymbolValue.GREATER, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e GREATER_EQUAL expression:f {: RESULT = new ASTNode(SymbolValue.GREATER_EQUAL, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e OR expression:f {: RESULT = new ASTNode(SymbolValue.OR, null); RESULT.addChild(e); RESULT.addChild(f); :}
+             | expression:e SHL expression:f {: RESULT = new ASTNode(SymbolValue.SHL, null); RESULT.addChild(e); RESULT.addChild(f); :}
+             | expression:e SHR expression:f {: RESULT = new ASTNode(SymbolValue.SHR, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e PLUS expression:f {: RESULT = new ASTNode(SymbolValue.PLUS, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e MINUS expression:f {: RESULT = new ASTNode(SymbolValue.MINUS, null); RESULT.addChild(e); RESULT.addChild(f); :}
              | expression:e TIMES expression:f {: RESULT = new ASTNode(SymbolValue.TIMES, null); RESULT.addChild(e); RESULT.addChild(f); :}
