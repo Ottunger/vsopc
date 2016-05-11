@@ -169,7 +169,7 @@ public class CGen {
             params.add("-L/usr/local/gc/lib");
             params.add("-lgc");
             for(int i = where; i < args.length; i++) {
-               if(args[i].startsWith("-li"))
+               if(args[i].startsWith("-cl"))
                   params.add(args[i].replaceFirst("-cl", "-l"));
             }
             pb = new ProcessBuilder(params);
