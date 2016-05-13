@@ -93,21 +93,34 @@ public class CGen {
       sb.append("float __powf(float a, int b); float __powf(float a, int b)"
                + "{if(b == 0) return 1.0f; if(b == 1) return a; float rec = __powf(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       //Define Object_struct. What did you expect?
-      sb.append("typedef struct Object_vtable Object_vtable; typedef struct Object_struct {Object_vtable* _vtable;} Object_struct; char Object_equals(Object_struct*,"
-               + "Object_struct*); int Object_code(Object_struct*); struct Object_vtable {char (*equals)(Object_struct*, Object_struct*); int (*code)(Object_struct*);};"
-               + "Object_vtable Object_static_vtable = {Object_equals, Object_code}; Object_struct* Object_init__(Object_struct* self)"
-               + "{self->_vtable = &Object_static_vtable; return self;}"
-               + "char Object_equals(Object_struct* a, Object_struct *b) {return a == b;}"
-               + "int Object_code(Object_struct* self) {return (int)self;}");
+      if(extd) {
+         sb.append("typedef struct Object_vtable Object_vtable; typedef struct Object_struct {Object_vtable* _vtable;} Object_struct; char Object_equals(Object_struct*,"
+                  + "Object_struct*); int Object_code(Object_struct*); struct Object_vtable {char (*equals)(Object_struct*, Object_struct*); int (*code)(Object_struct*);};"
+                  + "Object_vtable Object_static_vtable = {Object_equals, Object_code}; Object_struct* Object_init__(Object_struct* self)"
+                  + "{self->_vtable = &Object_static_vtable; return self;}"
+                  + "char Object_equals(Object_struct* a, Object_struct *b) {return a == b;}"
+                  + "int Object_code(Object_struct* self) {unsigned h = (unsigned)self; h ^= (h >> 20) ^ (h >> 12); return (int) (h ^ (h >> 7) ^ (h >> 4));}");
+      } else {
+         sb.append("typedef struct Object_vtable Object_vtable; typedef struct Object_struct {Object_vtable* _vtable;} Object_struct; struct Object_vtable {};"
+                  + "Object_vtable Object_static_vtable = {}; Object_struct* Object_init__(Object_struct* self){self->_vtable = &Object_static_vtable; return self;}");
+      }
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
                + "IO_struct* IO_printInt32(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); IO_struct* IO_printBool(IO_struct*, char);"
-               + "char* IO_inputLine(IO_struct*); int IO_inputInt32(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);"
-               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); int (*code)(IO_struct*); IO_struct* (*printInt32)(IO_struct*, int);"
-               + "IO_struct* (*printFloat)(IO_struct*, float); IO_struct* (*printBool)(IO_struct*, char); int (*inputInt32)(IO_struct*); char* (*inputLine)(IO_struct*);"
-               + "char (*inputBool)(IO_struct*); IO_struct* (*print)(IO_struct*, char*); float (*inputFloat)(IO_struct*);};"
-               + "IO_vtable IO_static_vtable = {Object_equals, Object_code, IO_printInt32, IO_printFloat, IO_printBool, IO_inputInt32,"
-               + "IO_inputLine, IO_inputBool, IO_print, IO_inputFloat}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
+               + "char* IO_inputLine(IO_struct*); int IO_inputInt32(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);");
+      if(extd) {
+         sb.append("struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); int (*code)(IO_struct*); IO_struct* (*printInt32)(IO_struct*, int);"
+                  + "IO_struct* (*printFloat)(IO_struct*, float); IO_struct* (*printBool)(IO_struct*, char); int (*inputInt32)(IO_struct*);"
+                  + "char* (*inputLine)(IO_struct*); char (*inputBool)(IO_struct*); IO_struct* (*print)(IO_struct*, char*); float (*inputFloat)(IO_struct*);};"
+                  + "IO_vtable IO_static_vtable = {Object_equals, Object_code, IO_printInt32, IO_printFloat, IO_printBool, IO_inputInt32,"
+                  + "IO_inputLine, IO_inputBool, IO_print, IO_inputFloat};");
+      } else {
+         sb.append("struct IO_vtable {IO_struct* (*printInt32)(IO_struct*, int); IO_struct* (*printFloat)(IO_struct*, float);"
+                  + "IO_struct* (*printBool)(IO_struct*, char); int (*inputInt32)(IO_struct*); char* (*inputLine)(IO_struct*); char (*inputBool)(IO_struct*);"
+                  + "IO_struct* (*print)(IO_struct*, char*); float (*inputFloat)(IO_struct*);};"
+                  + "IO_vtable IO_static_vtable = {IO_printInt32, IO_printFloat, IO_printBool, IO_inputInt32, IO_inputLine, IO_inputBool, IO_print, IO_inputFloat};");
+      }
+      sb.append("IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
                + "IO_struct* IO_print(IO_struct* self, char* str) {printf(\"%s\", str); return self;}"
                + "IO_struct* IO_printInt32(IO_struct* self, int num) {printf(\"%d\", num); return self;}"
                + "IO_struct* IO_printFloat(IO_struct* self, float num) {printf(\"%f\", num); return self;}"
@@ -817,7 +830,7 @@ public class CGen {
          buildBody(root, cname, mname, root.getChildren().get(0), nlets);
          sb.append("if(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") {");
          buildBody(root, cname, mname, root.getChildren().get(1), nlets);
-         sb.append("} else { ");
+         sb.append("goto " + brlabels.get(root)[0] + "; } else { ");
          sb.append(imapping.get(cname + "_" + mname).get(root) + " = 0;");
          sb.append("goto " + brlabels.get(root)[1] + ";}");
          sb.append(brlabels.get(root)[1] + ":");
@@ -863,8 +876,12 @@ public class CGen {
                         + ")" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
                break;
             case SymbolValue.EQUAL:
-               sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == (" +
-                        imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
+               if(root.getProp("type").equals("string"))
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = strcmp(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ", " +
+                           imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ") == 0;");
+               else
+                  sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") == (" +
+                           imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ");");
                break;
             case SymbolValue.AND:
                sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ") & (" +
@@ -1078,7 +1095,7 @@ public class CGen {
                         top--;
                      } while(top > -1);
                      if(top == -1) {
-                        tmp = root.getValue().toString();
+                        tmp = root.getChildren().get(0).getValue().toString();
                      }
                   }
                   sb.append(imapping.get(cname + "_" + mname).get(root) + " = (" + (has? "self->" +

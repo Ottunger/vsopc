@@ -111,6 +111,8 @@ public class Analyzer {
       root.scope.put(ScopeItem.CLASS, "unit", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "unit"), 0));
       root.scope.put(ScopeItem.CLASS, "IO", new ScopeItem(ScopeItem.CLASS, new ASTNode(SymbolValue.CLASS, "IO").addProp("prim", prim), 0));
       
+      //Mutate and/or if's to have lazy ones
+      lazyIf(root);
       //Register all classes top domain
       regClasses(root, true);
       //Register scopes
@@ -124,6 +126,46 @@ public class Analyzer {
          throw new Exception("1:1: semantics error bad main signature, should be \"+main() : int32\"");
       //Check types
       checkTypes(root, null, null, root.scope);
+   }
+   
+   /**
+    * Changes the AST to have lazy if's
+    * @param root AST.
+    */
+   private void lazyIf(ASTNode root) {
+      ASTNode e1, e2, build;
+      
+      if(root.ending == false) {
+         //Deals with if's below
+         for(ASTNode a : root.getChildren()) {
+            lazyIf(a);
+         }
+      }
+      
+      if(root.stype.equals("if")) {
+         //Lazy and
+         if(root.getChildren().get(0).itype == SymbolValue.AND) {
+            e1 = root.getChildren().get(0).getChildren().get(0);
+            e2 = root.getChildren().get(0).getChildren().get(1);
+            root.getChildren().set(0, e1);
+            build = new ASTNode("if", null).addChild(e2).addChild(root.getChildren().get(1));
+            if(root.getChildren().size() > 2)
+               build.addChild(root.getChildren().get(2).clone());
+            root.getChildren().set(1, build);
+         } 
+         //Lazy or
+         else if(root.getChildren().get(0).itype == SymbolValue.OR) {
+            e1 = root.getChildren().get(0).getChildren().get(0);
+            e2 = root.getChildren().get(0).getChildren().get(1);
+            root.getChildren().set(0, e1);
+            build = new ASTNode("if", null).addChild(e2).addChild(root.getChildren().get(1).clone());
+            if(root.getChildren().size() < 3)
+               root.addChild(null);
+            else
+               build.addChild(root.getChildren().get(2));
+            root.getChildren().set(2, build);
+         }
+      }
    }
    
    /**
@@ -355,10 +397,11 @@ public class Analyzer {
                root.addProp("type", "bool");
                meths = prim.get(getNodeType(root, cname, 0, true));
                /* Basic type if no registered method for this type */
-               if(meths != null && meths.size() == 0 && !getNodeType(root, cname, 0, true).equals(getNodeType(root, cname, 1, true))
+               if(meths != null && meths.size() == 0 && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 0, true), getNodeType(root, cname, 1, true))
+                        && !Analyzer.isSameOrChild(ext, getNodeType(root, cname, 1, true), getNodeType(root, cname, 0, true))
                         && !(getNodeType(root, cname, 0, true).equals("int32") && getNodeType(root, cname, 1, true).equals("byte"))
                         && !(getNodeType(root, cname, 0, true).equals("byte") && getNodeType(root, cname, 1, true).equals("int32")))
-                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '=' on different primitive types");
+                  throw new Exception(root.getProp("line") + ":" + root.getProp("col") + ": semantics error cannot use '=' on non-related types");
                break;
             case SymbolValue.AND:
             case SymbolValue.OR:
