@@ -94,17 +94,19 @@ public class CGen {
                + "{if(b == 0) return 1.0f; if(b == 1) return a; float rec = __powf(a, b/2); if(b % 2) return a * rec * rec; return rec * rec;} ");
       //Define Object_struct. What did you expect?
       sb.append("typedef struct Object_vtable Object_vtable; typedef struct Object_struct {Object_vtable* _vtable;} Object_struct; char Object_equals(Object_struct*,"
-               + "Object_struct*); struct Object_vtable {char (*equals)(Object_struct*, Object_struct*);}; Object_vtable Object_static_vtable = "
-               + "{Object_equals}; Object_struct* Object_init__(Object_struct* self) {self->_vtable = &Object_static_vtable; return self;}"
-               + "char Object_equals(Object_struct* a, Object_struct *b) {return a == b;}");
+               + "Object_struct*); int Object_code(Object_struct*); struct Object_vtable {char (*equals)(Object_struct*, Object_struct*); int (*code)(Object_struct*);};"
+               + "Object_vtable Object_static_vtable = {Object_equals, Object_code}; Object_struct* Object_init__(Object_struct* self)"
+               + "{self->_vtable = &Object_static_vtable; return self;}"
+               + "char Object_equals(Object_struct* a, Object_struct *b) {return a == b;}"
+               + "int Object_code(Object_struct* self) {return (int)self;}");
       //And here comes logging for free
       sb.append("typedef struct IO_vtable IO_vtable; typedef struct IO_struct {IO_vtable* _vtable;} IO_struct; IO_struct* IO_print(IO_struct*, char*);"
                + "IO_struct* IO_printInt32(IO_struct*, int); IO_struct* IO_printFloat(IO_struct*, float); IO_struct* IO_printBool(IO_struct*, char);"
                + "char* IO_inputLine(IO_struct*); int IO_inputInt32(IO_struct*); float IO_inputFloat(IO_struct*); char IO_inputBool(IO_struct*);"
-               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); IO_struct* (*printInt32)(IO_struct*, int); IO_struct* (*printFloat)(IO_struct*, float);"
-               + "IO_struct* (*printBool)(IO_struct*, char); int (*inputInt32)(IO_struct*); char* (*inputLine)(IO_struct*);"
+               + "struct IO_vtable {char (*equals)(IO_struct*, IO_struct*); int (*code)(IO_struct*); IO_struct* (*printInt32)(IO_struct*, int);"
+               + "IO_struct* (*printFloat)(IO_struct*, float); IO_struct* (*printBool)(IO_struct*, char); int (*inputInt32)(IO_struct*); char* (*inputLine)(IO_struct*);"
                + "char (*inputBool)(IO_struct*); IO_struct* (*print)(IO_struct*, char*); float (*inputFloat)(IO_struct*);};"
-               + "IO_vtable IO_static_vtable = {Object_equals, IO_printInt32, IO_printFloat, IO_printBool, IO_inputInt32,"
+               + "IO_vtable IO_static_vtable = {Object_equals, Object_code, IO_printInt32, IO_printFloat, IO_printBool, IO_inputInt32,"
                + "IO_inputLine, IO_inputBool, IO_print, IO_inputFloat}; IO_struct* IO_init__(IO_struct* self) {self->_vtable = &IO_static_vtable; return self;}"
                + "IO_struct* IO_print(IO_struct* self, char* str) {printf(\"%s\", str); return self;}"
                + "IO_struct* IO_printInt32(IO_struct* self, int num) {printf(\"%d\", num); return self;}"
@@ -132,6 +134,7 @@ public class CGen {
          sb.append("String_struct* String_a(String_struct* self, char* s) {int slen = strlen(s); if(self->rsize <= self->len + slen) { self->rsize = "
                   + "2*(self->len + slen) + 1; self->value = GC_REALLOC(self->value, self->rsize);} strcat(self->value, s); return self;}");
          sb.append("int String_asciiAt(String_struct* self, int i) {return (int)self->value[i];}");
+         sb.append("int String_code(String_struct* self) {int hash = 0; char c, *s = self->value; for (; c = *s; ++s) hash = 31 * hash + c; return hash;}");
       }
       //From a fourth pass, generate the methods that are functions that have a pointer *self
       //Fourth pass is actually deeper in first pass
@@ -659,6 +662,7 @@ public class CGen {
                      case "size":
                      case "a":
                      case "asciiAt":
+                     case "code":
                         leave = true;
                         break;
                      default:

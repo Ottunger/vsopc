@@ -4,6 +4,10 @@ class Unit {
    +equals(b : Object) : bool {
       true
    }
+   
+   +code() : int32 {
+      0
+   }
 }
 
 class Bool {
@@ -15,6 +19,13 @@ class Bool {
             true
          else
             false
+   }
+   
+   +code() : int32 {
+      if value then
+         1
+      else
+         0
    }
 }
 
@@ -54,10 +65,18 @@ class Integer {
          else
             false
    }
+   
+   +code() : int32 {
+      value
+   }
 }
 
 class Float {
    -+value : float;
+   
+   +code() : int32 {
+      @value
+   }
 }
 
 class String {
@@ -90,6 +109,11 @@ class String {
    }
    
    +asciiAt(i : int32) : int32 {
+      //This is actually never evaluated, replaced by compiler
+      0
+   }
+   
+   +code() : int32 {
       //This is actually never evaluated, replaced by compiler
       0
    }

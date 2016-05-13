@@ -46,11 +46,14 @@ public class Analyzer {
       prim.put("unit", new HashMap<String, ScopeItem>());
       prim.put("IO", new HashMap<String, ScopeItem>());
       //Register the methods of the well known Object class
-      //Method equals
       if(extd) {
+         //Method equals
          fms = new ASTNode("formals", null).addChild(new ASTNode("formal", null).addChild(new ASTNode(SymbolValue.OBJECT_IDENTIFIER, "b")).addProp("type", "Object"));
          tmp = new ASTNode("block", null).addProp("type", "bool");
          prim.get("Object").put("equals", new ScopeItem(ScopeItem.METHOD, tmp, fms, 3, ScopeItem.PUBLIC));
+         //Method code
+         tmp = new ASTNode("block", null).addProp("type", "int32");
+         prim.get("Object").put("code", new ScopeItem(ScopeItem.METHOD, tmp, null, 3, ScopeItem.PUBLIC));
       }
       //Register the methods of the well known IO class
       //Method print
