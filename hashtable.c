@@ -148,7 +148,6 @@ static void hash_table_insert_object_to_value(HashTable *hashTable, Object_struc
 
     hashValue = k->_vtable->code(k);
     i = hash_table_index(hashValue, hashTable->capacity);
-    printf("[i = %d, hash = %d]\n", i, hashValue);
     for (e = &hashTable->entries[i]; e != NULL && e->key != NULL; e = e->next) {
         if (k->_vtable->equals(k, e->key)) {
             e->value = value;
@@ -156,10 +155,8 @@ static void hash_table_insert_object_to_value(HashTable *hashTable, Object_struc
         }
     }
     if (hashTable->size > hashTable->threshold && hashTable->entries[i].key) {
-        printf("REHASH\n");
         hash_table_double(hashTable);
         i = hash_table_index(hashValue, hashTable->capacity);
-        printf("[i = %d, hash = %d]\n", i, hashValue);
     }
 
     if (hashTable->entries[i].key == NULL) {
