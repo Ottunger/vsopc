@@ -67,7 +67,7 @@ static void hash_table_inflate(HashTable *hashTable, int size) {
     empty.value = NULL;
     empty.next = NULL;
 
-    hashTable->entries = GC_MALLOC(capacity, sizeof(HashTableEntry));
+    hashTable->entries = GC_MALLOC(capacity * sizeof(HashTableEntry));
     for (i = 0; i < capacity; ++i) {
         hashTable->entries[i] = empty;
     }
@@ -89,7 +89,7 @@ static void hash_table_double(HashTable *hashTable) {
     empty.value = NULL;
     empty.next = NULL;
 
-    HashTableEntry *entries = GC_MALLOC(newCapacity, sizeof(HashTableEntry));
+    HashTableEntry *entries = GC_MALLOC(newCapacity * sizeof(HashTableEntry));
     for (i = 0; i < newCapacity; ++i) {
         entries[i] = empty;
     }
