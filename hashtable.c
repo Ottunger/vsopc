@@ -1,6 +1,6 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
+#include "gc.h"
 
 #define HT_INITIAL_CAPACITY     16
 #define HT_LOAD_FACTOR          0.75f
@@ -34,7 +34,7 @@ static inline int hash_table_index(int hash, int capacity) {
 }
 
 static HashTable *new_hash_table() {
-    HashTable *hashTable = malloc(sizeof(HashTable));
+    HashTable *hashTable = GC_MALLOC(sizeof(HashTable));
     if (!hashTable) return NULL;
 
     hashTable->entries = NULL;
@@ -47,7 +47,7 @@ static HashTable *new_hash_table() {
 
 static void hash_table_inflate(HashTable *hashTable, int size) {
 
-    int capacity;
+    int capacity, i;
     if (size > 1) {
         // Next power of 2 capacity
         capacity = (size - 1) <<  1;
@@ -61,7 +61,16 @@ static void hash_table_inflate(HashTable *hashTable, int size) {
         capacity = 1;
     }
 
-    hashTable->entries = calloc(capacity, sizeof(HashTableEntry));
+    HashTableEntry empty;
+    empty.hash = 0;
+    empty.key = NULL;
+    empty.value = NULL;
+    empty.next = NULL;
+
+    hashTable->entries = GC_MALLOC(capacity, sizeof(HashTableEntry));
+    for (i = 0; i < capacity; ++i) {
+        hashTable->entries[i] = empty;
+    }
     hashTable->threshold = (int) (capacity * hashTable->loadFactor);
     hashTable->capacity = capacity;
 
@@ -74,7 +83,16 @@ static void hash_table_double(HashTable *hashTable) {
     int newCapacity = oldCapacity * 2;
     int i;
 
-    HashTableEntry *entries = calloc(newCapacity, sizeof(HashTableEntry));
+    HashTableEntry empty;
+    empty.hash = 0;
+    empty.key = NULL;
+    empty.value = NULL;
+    empty.next = NULL;
+
+    HashTableEntry *entries = GC_MALLOC(newCapacity, sizeof(HashTableEntry));
+    for (i = 0; i < newCapacity; ++i) {
+        entries[i] = empty;
+    }
     for (i = 0; i < oldCapacity; ++i) {
         HashTableEntry *e = &hashTable->entries[i];
         int first = 1;
@@ -83,7 +101,7 @@ static void hash_table_double(HashTable *hashTable) {
 
             if (entries[j].key) {
                 if (first) {
-                    HashTableEntry *c = malloc(sizeof(HashTableEntry));
+                    HashTableEntry *c = GC_MALLOC(sizeof(HashTableEntry));
                     c->next = entries[j].next;
                     c->value = e->value;
                     c->hash = e->hash;
@@ -102,7 +120,7 @@ static void hash_table_double(HashTable *hashTable) {
                 entries[j].next = NULL;
                 HashTableEntry *next = e->next;
                 if (!first) {
-                    free(e);
+                    GC_FREE(e);
                 }
                 e = next;
             }
@@ -111,7 +129,7 @@ static void hash_table_double(HashTable *hashTable) {
         }
     }
 
-    free(hashTable->entries);
+    GC_FREE(hashTable->entries);
     hashTable->entries = entries;
     hashTable->capacity = newCapacity;
     hashTable->threshold = (int) (newCapacity * hashTable->loadFactor);
@@ -148,7 +166,7 @@ static void hash_table_insert_object_to_value(HashTable *hashTable, Object_struc
         e = &hashTable->entries[i];
         e->next = NULL;
     } else {
-        e = malloc(sizeof(HashTableEntry));
+        e = GC_MALLOC(sizeof(HashTableEntry));
         e->next = hashTable->entries[i].next;
         hashTable->entries[i].next = e;
     }
@@ -175,41 +193,4 @@ static Object_struct *hash_table_get_value(HashTable *hashTable, Object_struct *
         }
     }
     return NULL;
-}
-
-int main(int argc, char **argv) {
-
-    Object_struct K;
-    Object_struct V;
-
-    Object_struct *k = Object_init__(&K);
-    Object_struct *v = Object_init__(&V);
-
-
-    HashTable *hashTable = new_hash_table();
-    hash_table_insert_object_to_value(hashTable, k, v);
-    hash_table_insert_object_to_value(hashTable, k, v);
-    hash_table_insert_object_to_value(hashTable, k, v);
-    hash_table_insert_object_to_value(hashTable, k, v);
-    hash_table_insert_object_to_value(hashTable, v, k);
-
-    int i;
-    for (i = 0; i < 70; ++i) {
-        hash_table_insert_object_to_value(hashTable, Object_init__(malloc(sizeof(Object_struct))), v);
-    }
-
-
-    Object_struct *r = hash_table_get_value(hashTable, v);
-
-    if (r->_vtable->equals(r, v)) {
-        printf("Eq V\n");
-    } else if (r->_vtable->equals(r, k)) {
-        printf("Eq K\n");
-    } else {
-        printf("NEQ\n");
-    }
-
-    printf("%d\n", hashTable->size);
-
-    return 0;
 }
