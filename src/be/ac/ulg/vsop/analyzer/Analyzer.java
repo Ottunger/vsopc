@@ -135,11 +135,10 @@ public class Analyzer {
    private void lazyIf(ASTNode root) {
       ASTNode e1, e2, build;
       
-      if(root.ending == false) {
-         //Deals with if's below
-         for(ASTNode a : root.getChildren()) {
+      //Deals with if's below
+      for(ASTNode a : root.getChildren()) {
+         if(a != null)
             lazyIf(a);
-         }
       }
       
       if(root.stype.equals("if")) {

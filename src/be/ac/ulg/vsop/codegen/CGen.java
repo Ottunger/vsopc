@@ -84,7 +84,7 @@ public class CGen {
       //Create pow function, for pow in VSOP
       sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
       if(extd)
-         sb.append("#include \"hashtable.h\"\n");
+         sb.append("#include \"hashtable.c\"\n");
       for(int i = where; i < args.length; i++) {
          if(args[i].startsWith("-ci"))
             sb.append("#include " + args[i].replaceFirst("-ci", "") + "\n");
