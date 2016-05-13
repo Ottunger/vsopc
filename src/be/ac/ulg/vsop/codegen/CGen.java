@@ -83,6 +83,8 @@ public class CGen {
       
       //Create pow function, for pow in VSOP
       sb.append("#pragma pack(4)\n#include \"gc.h\"\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
+      if(extd)
+         sb.append("#include \"hashtable.h\"\n");
       for(int i = where; i < args.length; i++) {
          if(args[i].startsWith("-ci"))
             sb.append("#include " + args[i].replaceFirst("-ci", "") + "\n");
@@ -876,7 +878,7 @@ public class CGen {
                         + ")" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ";");
                break;
             case SymbolValue.EQUAL:
-               if(root.getProp("type").equals("string"))
+               if(root.getChildren().get(0).getProp("type").equals("string") && root.getChildren().get(1).getProp("type").equals("string"))
                   sb.append(imapping.get(cname + "_" + mname).get(root) + " = strcmp(" + imapping.get(cname + "_" + mname).get(root.getChildren().get(0)) + ", " +
                            imapping.get(cname + "_" + mname).get(root.getChildren().get(1)) + ") == 0;");
                else

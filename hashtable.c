@@ -1,30 +1,3 @@
-typedef struct Object_vtable Object_vtable;
-typedef struct Object_struct {Object_vtable* _vtable;}
-Object_struct;
-char Object_equals(Object_struct*, Object_struct*);
-int Object_code(Object_struct*);
-struct Object_vtable {
-    char (*equals)(Object_struct*, Object_struct*);
-    int (*code)(Object_struct*);
-};
-Object_vtable Object_static_vtable = {Object_equals, Object_code};
-Object_struct* Object_init__(Object_struct* self) {
-    self->_vtable = &Object_static_vtable;
-    return self;
-}
-char Object_equals(Object_struct* a, Object_struct *b) {
-    return a == b;
-}
-
-int Object_code(Object_struct* self) {
-
-    unsigned h = (unsigned) self;
-    h ^= (h >> 20) ^ (h >> 12);
-    return (int) (h ^ (h >> 7) ^ (h >> 4));
-
-}
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
